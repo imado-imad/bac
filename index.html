@@ -48,22 +48,25 @@
             background-color: #dc2626;
             transform: scale(1.1);
         }
+        
         #Cover1 {
             transition: opacity 0.3s ease;
             z-index: 1000;
             overflow: auto;
         }
+        
         #Cover1:not(.hidden) {
             display: flex;
             align-items: flex-start;
             padding: 0rem;
         }
+        
         .image-wrapper {
             position: relative;
             display: inline-block;
             width: 100%;
-            max-width: 100%;
-            overflow: hidden;
+            max-width: 800px;
+            overflow: auto;
             cursor: zoom-in;
         }
         
@@ -72,11 +75,17 @@
             width: 100%;
             height: auto;
             display: block;
+            cursor: zoom-in;
         }
         
         .zoomed {
             transform: scale(1.5);
-            cursor: zoom-out;
+            cursor: grab;
+            transform-origin: 0 0;
+        }
+        
+        .grabbing {
+            cursor: grabbing !important;
         }
         
         @media (max-width: 640px) {
@@ -86,56 +95,57 @@
                 top: 0.5rem;
                 right: 0.5rem;
             }
-          
         }
     </style>
 </head>
-<body>
-        <button 
-            id="revealButton"
-            class="bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600 text-white font-bold py-4 px-8 rounded-full shadow-lg transform transition-all duration-300 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-purple-300 pulse mb-8"
-            onclick="revealImage()"
-        >
-            <span class="text-xl md:text-2xl">Reveal Image</span>
-            <i class="fas fa-image ml-2"></i>
-        </button>
+<body class="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-4">
+    <button 
+        id="revealButton"
+        class="bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600 text-white font-bold py-4 px-8 rounded-full shadow-lg transform transition-all duration-300 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-purple-300 pulse mb-8"
+        onclick="revealImage()"
+    >
+        <span class="text-xl md:text-2xl">Reveal Image</span>
+        <i class="fas fa-image ml-2"></i>
+    </button>
 
-        <div id="Cover1" class="hidden fixed inset-0  bg-gradient-to-br from-blue-50 to-purple-50  justify-center p-0">
-        <div id="Cover2" class="text-center w-full max-w-3xl">
-        <div id="imageContainer" class="w-full">
-            <div class="image-wrapper relative">
-                <img 
-                    id="displayedImage"
-                    src="https://imado-imad.github.io/bac/images/2024-mathematics-exam.jpg" 
-                    alt="2024 Mathematics Exam"
-                    class="w-full h-auto rounded-lg shadow-2xl border-4 border-white fade-in"
-                    loading="lazy"
-                    ondblclick="toggleZoom(this)"
-                >
-                <div class="close-btn" onclick="hideImage()">
-                    <i class="fas fa-times text-lg"></i>
+    <div id="Cover1" class="hidden fixed inset-0 bg-gradient-to-br from-blue-50 to-purple-50 justify-center p-4 md:p-8">
+        <div id="Cover2" class="text-center w-full max-w-4xl">
+            <div id="imageContainer" class="w-full">
+                <div class="image-wrapper relative">
+                    <img 
+                        id="displayedImage"
+                        src="https://imado-imad.github.io/bac/images/2024-mathematics-exam.jpg" 
+                        alt="2024 Mathematics Exam"
+                        class="w-full h-auto rounded-lg shadow-2xl border-4 border-white fade-in"
+                        loading="lazy"
+                        ondblclick="toggleZoom(this)"
+                    >
+                    <div class="close-btn" onclick="hideImage()">
+                        <i class="fas fa-times text-lg"></i>
+                    </div>
                 </div>
-            </div>
-            <div class="flex justify-center gap-4 mt-0">
-                <button 
-                    onclick="hideImage()"
-                    class="bg-gray-800 hover:bg-gray-900 text-white font-medium py-2 px-6 rounded-full shadow-md transition-all duration-300 hover:scale-105"
-                >
-                    <i class="fas fa-times mr-2"></i> Hide Image
-                </button>
+                <div class="flex justify-center gap-4 mt-4">
+                    <button 
+                        onclick="hideImage()"
+                        class="bg-gray-800 hover:bg-gray-900 text-white font-medium py-2 px-6 rounded-full shadow-md transition-all duration-300 hover:scale-105"
+                    >
+                        <i class="fas fa-times mr-2"></i> Hide Image
+                    </button>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
     <script>
         let isZoomed = false;
+        let isDragging = false;
+        let startX, startY, scrollLeft, scrollTop;
         const Cover1 = document.getElementById('Cover1');
         const imageContainer = document.getElementById('imageContainer');
         const button = document.getElementById('revealButton');
         const image = document.getElementById('displayedImage');
+        const imageWrapper = document.querySelector('.image-wrapper');
 
-        
         function revealImage() {
             Cover1.classList.remove('hidden');
             image.classList.remove('zoomed');
@@ -145,22 +155,107 @@
         function hideImage() {
             Cover1.classList.add('hidden');
             document.body.style.overflow = 'auto';
+            // Reset zoom and scroll when hiding
+            if (isZoomed) {
+                image.classList.remove('zoomed');
+                imageWrapper.scrollLeft = 0;
+                imageWrapper.scrollTop = 0;
+                isZoomed = false;
+            }
         }
         
         function toggleZoom(img) {
             isZoomed = !isZoomed;
             if (isZoomed) {
                 img.classList.add('zoomed');
+                img.style.cursor = 'grab';
             } else {
                 img.classList.remove('zoomed');
+                img.style.cursor = 'zoom-in';
+                // Reset scroll position when zooming out
+                imageWrapper.scrollLeft = 0;
+                imageWrapper.scrollTop = 0;
             }
         }
         
+        // Mouse events for desktop
+        imageWrapper.addEventListener('mousedown', (e) => {
+            if (!isZoomed) return;
+            
+            isDragging = true;
+            startX = e.pageX - imageWrapper.offsetLeft;
+            startY = e.pageY - imageWrapper.offsetTop;
+            scrollLeft = imageWrapper.scrollLeft;
+            scrollTop = imageWrapper.scrollTop;
+            image.style.cursor = 'grabbing';
+            image.classList.add('grabbing');
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (!isDragging) return;
+            isDragging = false;
+            if (isZoomed) {
+                image.style.cursor = 'grab';
+                image.classList.remove('grabbing');
+            } else {
+                image.style.cursor = 'zoom-in';
+            }
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging || !isZoomed) return;
+            e.preventDefault();
+            const x = e.pageX - imageWrapper.offsetLeft;
+            const y = e.pageY - imageWrapper.offsetTop;
+            const walkX = (x - startX) * 2;
+            const walkY = (y - startY) * 2;
+            imageWrapper.scrollLeft = scrollLeft - walkX;
+            imageWrapper.scrollTop = scrollTop - walkY;
+        });
+
+        // Touch events for mobile
+        imageWrapper.addEventListener('touchstart', (e) => {
+            if (!isZoomed) return;
+            isDragging = true;
+            startX = e.touches[0].pageX - imageWrapper.offsetLeft;
+            startY = e.touches[0].pageY - imageWrapper.offsetTop;
+            scrollLeft = imageWrapper.scrollLeft;
+            scrollTop = imageWrapper.scrollTop;
+            image.style.cursor = 'grabbing';
+            image.classList.add('grabbing');
+        });
+
+        document.addEventListener('touchend', () => {
+            if (!isDragging) return;
+            isDragging = false;
+            if (isZoomed) {
+                image.style.cursor = 'grab';
+                image.classList.remove('grabbing');
+            } else {
+                image.style.cursor = 'zoom-in';
+            }
+        });
+
+        document.addEventListener('touchmove', (e) => {
+            if (!isDragging || !isZoomed) return;
+            e.preventDefault();
+            const x = e.touches[0].pageX - imageWrapper.offsetLeft;
+            const y = e.touches[0].pageY - imageWrapper.offsetTop;
+            const walkX = (x - startX) * 2;
+            const walkY = (y - startY) * 2;
+            imageWrapper.scrollLeft = scrollLeft - walkX;
+            imageWrapper.scrollTop = scrollTop - walkY;
+        });
+
         // Make sure image stays responsive on window resize
         window.addEventListener('resize', function() {
             if (image && isZoomed) {
                 image.classList.remove('zoomed');
+                image.style.cursor = 'zoom-in';
                 isZoomed = false;
+                // Reset scroll position
+                imageWrapper.scrollLeft = 0;
+                imageWrapper.scrollTop = 0;
             }
         });
     </script>
