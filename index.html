@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Image Revealer</title>
+    <title>Image Revealer</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -30,353 +30,141 @@
             position: absolute;
             top: 1rem;
             right: 1rem;
-            background: rgba(0, 0, 0, 0.7);
+            width: 40px;
+            height: 40px;
+            background-color: #ef4444;
             color: white;
             border-radius: 50%;
-            width: 2.5rem;
-            height: 2.5rem;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            z-index: 10;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             transition: all 0.3s ease;
+            z-index: 10;
         }
         
         .close-btn:hover {
-            background: rgba(0, 0, 0, 0.9);
+            background-color: #dc2626;
             transform: scale(1.1);
         }
-        
-        .image-container {
-            position: relative;
-            width: 100%;
-            overflow: hidden;
-            touch-action: none;
+        #Cover1 {
+            transition: opacity 0.3s ease;
+            z-index: 1000;
+            overflow: auto;
         }
-        
+        #Cover1:not(.hidden) {
+            display: flex;
+            align-items: flex-start;
+            padding: 0rem;
+        }
         .image-wrapper {
             position: relative;
+            display: inline-block;
             width: 100%;
-            height: 100%;
+            max-width: 100%;
             overflow: hidden;
         }
         
-        .image-zoom {
+        #displayedImage {
+            transition: transform 0.3s ease;
             width: 100%;
             height: auto;
-            transition: transform 0.3s ease;
-            transform-origin: center center;
-            cursor: grab;
-            touch-action: none;
-            user-select: none;
+            display: block;
         }
         
-        .image-zoom.zoomed {
-            cursor: grab;
-            transform: scale(2) translate(0, 0);
+        .zoomed {
+            transform: scale(1.5);
+            cursor: zoom-out;
         }
         
-        .image-zoom.zoomed:active {
-            cursor: grabbing;
-        }
-        
-        .image-zoom.dragging {
-            transition: none;
-        }
-        
-        .drag-indicator {
-            position: absolute;
-            bottom: 1rem;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 0.5rem 1rem;
-            border-radius: 2rem;
-            font-size: 0.9rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            z-index: 5;
-            animation: bounce 2s infinite;
-        }
-        
-        @keyframes bounce {
-            0%, 20%, 50%, 80%, 100% {transform: translateY(0) translateX(-50%);}
-            40% {transform: translateY(-10px) translateX(-50%);}
-            60% {transform: translateY(-5px) translateX(-50%);}
-        }
-        
-        @media (max-width: 768px) {
-            .image-zoom.zoomed {
-                transform: scale(3) translate(0, 0);
+        @media (max-width: 640px) {
+            .close-btn {
+                width: 30px;
+                height: 30px;
+                top: 0.5rem;
+                right: 0.5rem;
             }
-            
-            .drag-indicator {
-                font-size: 0.8rem;
-                padding: 0.4rem 0.8rem;
+            .image-wrapper {
+                cursor: zoom-in;
             }
         }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center p-0">
-    <div class="text-center">
+<body>
         <button 
             id="revealButton"
-            class="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-bold py-4 px-8 rounded-full shadow-lg transition-all duration-300 ease-in-out transform hover:scale-105 pulse flex items-center gap-2"
+            class="bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600 text-white font-bold py-4 px-8 rounded-full shadow-lg transform transition-all duration-300 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-purple-300 pulse mb-8"
             onclick="revealImage()"
         >
-            <i class="fas fa-image"></i>
+            <span class="text-xl md:text-2xl">Reveal Image</span>
+            <i class="fas fa-image ml-2"></i>
         </button>
-    </div>
-    
-    <div id="imageContainer" class="w-full max-w-4xl mt-8 hidden relative">
-        <div class="image-container">
-            <div id="closeBtn" class="close-btn hidden">
-                <i class="fas fa-times text-xl"></i>
-            </div>
-            <div id="dragIndicator" class="drag-indicator hidden">
-                <i class="fas fa-arrows-up-down"></i>
-                <span>Drag up/down</span>
-            </div>
-            <div class="image-wrapper">
+
+        <div id="Cover1" class="hidden fixed inset-0  bg-gradient-to-br from-blue-50 to-purple-50  justify-center p-0">
+        <div id="Cover2" class="text-center w-full max-w-3xl">
+        <div id="imageContainer" class="w-full">
+            <div class="image-wrapper relative">
                 <img 
                     id="displayedImage"
                     src="https://imado-imad.github.io/bac/images/2024-mathematics-exam.jpg" 
-                    alt="Mathematics Exam"
-                    class="image-zoom w-full h-auto rounded-lg shadow-xl fade-in"
+                    alt="2024 Mathematics Exam"
+                    class="w-full h-auto rounded-lg shadow-2xl border-4 border-white fade-in"
+                    loading="lazy"
                 >
+                <div class="close-btn" onclick="hideImage()">
+                    <i class="fas fa-times text-lg"></i>
+                </div>
+            </div>
+            <div class="flex justify-center gap-4 mt-0">
+                <button 
+                    onclick="hideImage()"
+                    class="bg-gray-800 hover:bg-gray-900 text-white font-medium py-2 px-6 rounded-full shadow-md transition-all duration-300 hover:scale-105"
+                >
+                    <i class="fas fa-times mr-2"></i> Hide Image
+                </button>
             </div>
         </div>
     </div>
+</div>
 
     <script>
-        function revealImage() {
-            const button = document.getElementById('revealButton');
-            const imageContainer = document.getElementById('imageContainer');
-            const closeBtn = document.getElementById('closeBtn');
-            const dragIndicator = document.getElementById('dragIndicator');
-            
-            // Hide the button
-            button.classList.add('hidden');
-            
-            // Show the image, close button, and drag indicator
-            imageContainer.classList.remove('hidden');
-            closeBtn.classList.remove('hidden');
-            dragIndicator.classList.remove('hidden');
-            
-            // Optional: Scroll to the image
-            imageContainer.scrollIntoView({ behavior: 'smooth' });
-        }
-        
-        // Close functionality
-        document.getElementById('closeBtn').addEventListener('click', function() {
-            const button = document.getElementById('revealButton');
-            const imageContainer = document.getElementById('imageContainer');
-            const image = document.getElementById('displayedImage');
-            const closeBtn = document.getElementById('closeBtn');
-            const dragIndicator = document.getElementById('dragIndicator');
-            
-            imageContainer.classList.add('hidden');
-            closeBtn.classList.add('hidden');
-            dragIndicator.classList.add('hidden');
-            button.classList.remove('hidden');
-            button.classList.add('pulse');
-            
-            // Reset zoom and position if active
-            image.classList.remove('zoomed');
-            image.style.transform = 'translateY(0) scale(1)';
-            currentPos = { x: 0, y: 0 };
-            isDragging = false;
-        });
-        
-        // Enhanced drag and zoom functionality
+        const Cover1 = document.getElementById('Cover1');
+        const imageContainer = document.getElementById('imageContainer');
+        const button = document.getElementById('revealButton');
         const image = document.getElementById('displayedImage');
-        const dragIndicator = document.getElementById('dragIndicator');
-        let lastTap = 0;
-        let touchStartTime = 0;
-        let isDragging = false;
-        let isZoomed = false;
-        let startPos = { x: 0, y: 0 };
-        let currentPos = { x: 0, y: 0 };
-        let scale = 1;
-        
-        // Mouse down event for dragging
-        image.addEventListener('mousedown', function(e) {
-            if (!isZoomed) {
-                // Vertical dragging before zoom
-                isDragging = true;
-                startPos = {
-                    x: e.clientX,
-                    y: e.clientY
-                };
-                image.classList.add('dragging');
-                e.preventDefault();
-            } else {
-                // Panning after zoom
-                isDragging = true;
-                startPos = {
-                    x: e.clientX - currentPos.x,
-                    y: e.clientY - currentPos.y
-                };
-                image.classList.add('dragging');
-                e.preventDefault();
-            }
-        });
-        
-        // Mouse move event for dragging
-        document.addEventListener('mousemove', function(e) {
-            if (isDragging) {
-                if (!isZoomed) {
-                    // Vertical dragging before zoom
-                    const deltaY = e.clientY - startPos.y;
-                    image.style.transform = `translateY(${deltaY}px) scale(1)`;
-                } else {
-                    // Panning after zoom
-                    currentPos = {
-                        x: e.clientX - startPos.x,
-                        y: e.clientY - startPos.y
-                    };
-                    
-                    const transform = `scale(${getCurrentScale()}) translate(${currentPos.x}px, ${currentPos.y}px)`;
-                    image.style.transform = transform;
-                }
-            }
-        });
-        
-        // Mouse up event to stop dragging
-        document.addEventListener('mouseup', function() {
-            if (isDragging) {
-                isDragging = false;
-                image.classList.remove('dragging');
-            }
-        });
-        
-        // Touch events for mobile
-        let touchStartX = 0;
-        let touchStartY = 0;
-        let touchCurrentX = 0;
-        let touchCurrentY = 0;
-        
-        image.addEventListener('touchstart', function(e) {
-            const currentTime = new Date().getTime();
-            const tapLength = currentTime - lastTap;
-            
-            if (tapLength < 300 && tapLength > 0) {
-                // Double tap detected
-                e.preventDefault();
-                toggleZoom(e);
-            }
-            
-            lastTap = currentTime;
-            touchStartTime = currentTime;
-            
-            if (!isZoomed) {
-                // Vertical dragging before zoom
-                isDragging = true;
-                touchStartY = e.touches[0].clientY;
-                image.classList.add('dragging');
-            } else {
-                // Panning after zoom
-                isDragging = true;
-                touchStartX = e.touches[0].clientX - currentPos.x;
-                touchStartY = e.touches[0].clientY - currentPos.y;
-                image.classList.add('dragging');
-            }
-        }, { passive: false });
-        
-        image.addEventListener('touchmove', function(e) {
-            if (isDragging) {
-                if (!isZoomed) {
-                    // Vertical dragging before zoom
-                    const deltaY = e.touches[0].clientY - touchStartY;
-                    image.style.transform = `translateY(${deltaY}px) scale(1)`;
-                    e.preventDefault();
-                } else {
-                    // Panning after zoom
-                    touchCurrentX = e.touches[0].clientX - touchStartX;
-                    touchCurrentY = e.touches[0].clientY - touchStartY;
-                    
-                    currentPos = {
-                        x: touchCurrentX,
-                        y: touchCurrentY
-                    };
-                    
-                    const transform = `scale(${getCurrentScale()}) translate(${currentPos.x}px, ${currentPos.y}px)`;
-                    image.style.transform = transform;
-                    e.preventDefault();
-                }
-            }
-        }, { passive: false });
-        
-        image.addEventListener('touchend', function() {
-            if (isDragging) {
-                isDragging = false;
-                image.classList.remove('dragging');
-                
-                // Hide drag indicator after first interaction
-                dragIndicator.classList.add('hidden');
-            }
-        });
-        
-        // Double click for desktop zoom
-        image.addEventListener('dblclick', function(e) {
-            e.preventDefault();
-            toggleZoom(e);
-        });
-        
-        function getCurrentScale() {
-            return isZoomed ? (window.innerWidth <= 768 ? 3 : 2) : 1;
+        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints;
+
+        function revealImage() {
+            Cover1.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
         }
         
-        function toggleZoom(e) {
-            isZoomed = !isZoomed;
-            
-            if (isZoomed) {
-                // Zoom in
-                image.classList.add('zoomed');
-                
-                const rect = image.getBoundingClientRect();
-                let offsetX, offsetY;
-                
-                if (e.type === 'click' || e.type === 'dblclick') {
-                    offsetX = e.clientX - rect.left;
-                    offsetY = e.clientY - rect.top;
-                } else if (e.type === 'touchstart' && e.touches.length === 1) {
-                    offsetX = e.touches[0].clientX - rect.left;
-                    offsetY = e.touches[0].clientY - rect.top;
-                }
-                
-                // Calculate the center of the tap relative to the image
-                const originX = (offsetX / rect.width) * 100;
-                const originY = (offsetY / rect.height) * 100;
-                
-                image.style.transformOrigin = `${originX}% ${originY}%`;
-                
-                // Reset position when zooming in
-                currentPos = { x: 0, y: 0 };
-                image.style.transform = `scale(${getCurrentScale()}) translate(0, 0)`;
-                
-                // Hide drag indicator after zoom
-                dragIndicator.classList.add('hidden');
-            } else {
-                // Zoom out
-                image.classList.remove('zoomed');
-                currentPos = { x: 0, y: 0 };
-                image.style.transform = 'translateY(0) scale(1)';
-            }
+        function hideImage() {
+            Cover1.classList.add('hidden');
+            document.body.style.overflow = 'auto';
         }
-        
-        // Reset zoom when clicking outside the image
-        document.addEventListener('click', function(e) {
-            if (!image.contains(e.target) && isZoomed) {
-                isZoomed = false;
-                image.classList.remove('zoomed');
-                currentPos = { x: 0, y: 0 };
-                image.style.transform = 'translateY(0) scale(1)';
-            }
-        });
+
+        // Only enable zoom for touch devices
+        if (isTouchDevice) {
+            let isZoomed = false;
+            image.style.cursor = 'zoom-in';
+            image.addEventListener('dblclick', function() {
+                isZoomed = !isZoomed;
+                if (isZoomed) {
+                    image.classList.add('zoomed');
+                } else {
+                    image.classList.remove('zoomed');
+                }
+            });
+
+            window.addEventListener('resize', function() {
+                if (isZoomed) {
+                    image.classList.remove('zoomed');
+                    isZoomed = false;
+                }
+            });
+        }
     </script>
 </body>
 </html>
