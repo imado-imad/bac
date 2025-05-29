@@ -2,1035 +2,270 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Baccalaureate Subjects Portal | 2008-2025</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Image Revealer</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
-<style>
-   * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-body {
-    font-family: 'Poppins', sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    min-height: 100vh;
-    overflow-x: hidden;
-}
-
-/* Start Screen Styles */
-.start-screen {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100vh;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    transition: all 0.8s ease;
-}
-
-.start-screen.fade-out {
-    opacity: 0;
-    transform: scale(1.1);
-}
-
-.start-content {
-    text-align: center;
-    color: white;
-    z-index: 2;
-}
-
-.logo-container {
-    font-size: 4rem;
-    margin-bottom: 1rem;
-    animation: float 3s ease-in-out infinite;
-}
-
-.start-title {
-    font-size: 3.5rem;
-    font-weight: 700;
-    margin-bottom: 0.5rem;
-    background: linear-gradient(45deg, #fff, #f0f0f0);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-.start-subtitle {
-    font-size: 1.2rem;
-    margin-bottom: 2rem;
-    opacity: 0.9;
-}
-
-.enter-btn {
-    background: rgba(255, 255, 255, 0.2);
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    color: white;
-    padding: 1rem 2rem;
-    border-radius: 50px;
-    font-size: 1.1rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    backdrop-filter: blur(10px);
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin: 0 auto;
-}
-
-.enter-btn:hover {
-    background: rgba(255, 255, 255, 0.3);
-    transform: translateY(-2px);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-}
-
-.particles {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    z-index: 1;
-}
-
-/* Main App Styles */
-.main-app {
-    min-height: 100vh;
-    transition: all 0.8s ease;
-}
-
-.main-app.hidden {
-    opacity: 0;
-    transform: translateY(50px);
-}
-
-.hidden {
-    display: none !important;
-}
-
-/* Header Styles */
-.header {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(20px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-    padding: 1rem 0;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-}
-
-.header-content {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 2rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.logo {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: white;
-    font-size: 1.5rem;
-    font-weight: 600;
-}
-
-.logo i {
-    font-size: 2rem;
-}
-
-.nav {
-    display: flex;
-    gap: 1rem;
-}
-
-.nav-btn {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: white;
-    padding: 0.5rem 1rem;
-    border-radius: 25px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.9rem;
-}
-
-.nav-btn:hover,
-.nav-btn.active {
-    background: rgba(255, 255, 255, 0.2);
-    transform: translateY(-1px);
-}
-
-/* Container */
-.container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 2rem;
-}
-
-/* Page Header */
-.page-header {
-    text-align: center;
-    margin-bottom: 3rem;
-    color: white;
-}
-
-.page-header h1 {
-    font-size: 3rem;
-    font-weight: 700;
-    margin-bottom: 0.5rem;
-}
-
-.page-header p {
-    font-size: 1.2rem;
-    opacity: 0.9;
-}
-
-/* Years Grid */
-.years-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 2rem;
-    margin-top: 2rem;
-}
-
-.year-card {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 20px;
-    padding: 2rem;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    color: white;
-    position: relative;
-    overflow: hidden;
-}
-
-.year-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-    transition: left 0.5s ease;
-}
-
-.year-card:hover::before {
-    left: 100%;
-}
-
-.year_card:hover {
-    transform: translateY(-10px);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-    background: rgba(255, 255, 255, 0.15);
-}
-
-.year-icon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
-    color: #ffd700;
-}
-
-.year-number {
-    font-size: 2rem;
-    font-weight: 700;
-    margin-bottom: 0.5rem;
-}
-
-.year-label {
-    opacity: 0.8;
-    font-size: 0.9rem;
-}
-
-/* Subjects View */
-.subjects-header {
-    display: flex;
-    align-items: center;
-    gap: 2rem;
-    margin-bottom: 3rem;
-    color: white;
-}
-
-.back-btn {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: white;
-    padding: 0.75rem 1.5rem;
-    border-radius: 25px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 1rem;
-}
-
-.back-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-    transform: translateX(-5px);
-}
-
-.year-info h1 {
-    font-size: 3rem;
-    font-weight: 7;
-    margin-bottom: 0.25rem;
-}
-
-.year-info p {
-    opacity: 0.9;
-    font-size: 1.1rem;
-}
-
-/* Subjects Grid */
-.subjects-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-    gap: 2rem;
-}
-
-.subject-card {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 20px;
-    padding: 2rem;
-    color: white;
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
-}
-
-.subject-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
-    background: rgba(255, 255, 255, 0.15);
-}
-
-.subject-header {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-}
-
-.subject-icon {
-    font-size: 2.5rem;
-    color: #ffd700;
-}
-
-.subject-info h3 {
-    font-size: 1.5rem;
-    font-weight: 600;
-    margin-bottom: 0.25rem;
-}
-
-.subject-info p {
-    opacity: 0.8;
-    font-size: 0.9rem;
-}
-
-.subject-actions {
-    display: flex;
-    gap: 1rem;
-}
-
-.action-btn {
-    flex: 1;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: white;
-    padding: 0.75rem 1rem;
-    border-radius: 15px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    font-size: 0.9rem;
-    font-weight: 500;
-}
-
-.action-btn.primary {
-    background: linear-gradient(45deg, #667eea, #764ba2);
-    border: none;
-}
-
-.action-btn.secondary {
-    background: linear-gradient(45deg, #f093fb, #f5576c);
-    border: none;
-}
-
-.action-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-}
-
-/* Animations */
-@keyframes float {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-20px); }
-}
-
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.fade-in-up {
-    animation: fadeInUp 0.6s ease forwards;
-}
-
-/* Image Viewer Styles */
-.fade-in {
-    animation: fadeIn 0.5s ease-in-out;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-.pulse {
-    animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-    100% { transform: scale(1); }
-}
-
-.close-btn {
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
-    width: 40px;
-    height: 40px;
-    background-color: #ef4444;
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease;
-    z-index: 1500;
-}
-
-.close-btn:hover {
-    background-color: #dc2626;
-    transform: scale(1.1);
-}
-
-#image-viewer {
-    transition: opacity 0.3s ease;
-    z-index: 1000;
-    overflow: auto;
-    touch-action: none;
-    overscroll-behavior: contain;
-}
-
-#image-viewer:not(.hidden) {
-    display: flex;
-    align-items: flex-start;
-    padding: 0rem;
-}
-
-.image-wrapper {
-    position: relative;
-    display: inline-block;
-    width: 100%;
-    max-width: 100%;
-    overflow: hidden;
-    margin: auto;
-    touch-action: none;
-}
-
-#displayed-image {
-    width: 100%;
-    height: auto;
-    display: block;
-    max-height: none;
-    transform-origin: center center;
-    transition: transform 0.1s ease-out;
-    will-change: transform;
-    user-select: none;
-    -webkit-user-drag: none;
-}
-
-#imageBlock {
-    touch-action: none;
-    position: relative;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-    .container {
-        padding: 1rem;
-    }
-    
-    .start-title {
-        font-size: 2.5rem;
-    }
-    
-    .page-header h1 {
-        font-size: 2rem;
-    }
-    
-    .years-grid {
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 1rem;
-    }
-    
-    .subjects-grid {
-        grid-template-columns: 1fr;
-        gap: 1rem;
-    }
-    
-    .subjects-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 1rem;
-    }
-    
-    .year-info h1 {
-        font-size: 2rem;
-    }
-    
-    .subject-actions {
-        flex-direction: column;
-    }
-    
-    .header-content {
-        padding: 0 1rem;
-    }
-    
-    .nav {
-        gap: 0.5rem;
-    }
-    
-    .nav-btn span {
-        display: none;
-    }
-}
-
-@media (max-width: 480px) {
-    .year-card {
-        padding: 1.5rem;
-    }
-    
-    .subject-card {
-        padding: 1.5rem;
-    }
-    
-    .start-title {
-        font-size: 2rem;
-    }
-    
-    .logo span {
-        display: none;
-    }
-    
-    .close-btn {
-        width: 30px;
-        height: 30px;
-        top: 0.5rem;
-        right: 0.5rem;
-    }
-    
-    #image-viewer {
-        padding: 0rem;
-    }
-}
-</style>
-</head>
-<body>
-    <!-- Start Screen -->
-    <div id="start-screen" class="start-screen">
-        <div class="start-content">
-            <div class="logo-container">
-                <i class="fas fa-graduation-cap"></i>
-            </div>
-            <h1 class="start-title">Baccalaureate Portal</h1>
-            <p class="start-subtitle">Access exam subjects from 2008 to 2025</p>
-            <button id="enter-btn" class="enter-btn">
-                <span>Enter Portal</span>
-                <i class="fas fa-arrow-right"></i>
-            </button>
-        </div>
-        <div class="particles"></div>
-    </div>
-    <!-- Main Application -->
-    <div id="main-app" class="main-app hidden">
-        <!-- Header -->
-        <header class="header">
-            <div class="header-content">
-                <div class="logo">
-                    <i class="fas fa-graduation-cap"></i>
-                    <span>Baccalaureate Portal</span>
-                </div>
-                <nav class="nav">
-                    <button id="home-btn" class="nav-btn active">
-                        <i class="fas fa-home"></i>
-                        <span>Home</span>
-                    </button>
-                    <button id="about-btn" class="nav-btn">
-                        <i class="fas fa-info-circle"></i>
-                        <span>About</span>
-                    </button>
-                </nav>
-            </div>
-        </header>
-
-        <!-- Years Grid -->
-        <main id="years-view" class="years-view">
-            <div class="container">
-                <div class="page-header">
-                    <h1>Select Academic Year</h1>
-                    <p>Choose from baccalaureate exam years 2008-2025</p>
-                </div>
-                <div id="years-grid" class="years-grid">
-                    <!-- Years will be populated by JavaScript -->
-                </div>
-            </div>
-        </main>
-
-        <!-- Subjects View -->
-        <div id="subjects-view" class="subjects-view hidden">
-            <div class="container">
-                <div class="subjects-header">
-                    <button id="back-btn" class="back-btn">
-                        <i class="fas fa-arrow-left"></i>
-                        <span>Back to Years</span>
-                    </button>
-                    <div class="year-info">
-                        <h1 id="selected-year">2025</h1>
-                        <p>Baccalaureate Subjects</p>
-                    </div>
-                </div>
-                <div id="subjects-grid" class="subjects-grid">
-                    <!-- Subjects will be populated by JavaScript -->
-                </div>
-            </div>
-        </div>
-    </div>
-       
-    <div id="image-viewer" class="hidden fixed inset-0 bg-black bg-opacity-90 justify-center">
-        <div id="imageContainer" class="text-center w-full max-w-4xl h-full flex items-center justify-center">
-            <div id="imageBlock" class="relative w-full h-full overflow-hidden touch-none">
-                <div class="image-wrapper relative w-full h-full flex items-center justify-center">
-                    <img id="displayed-image" class="max-w-full max-h-full rounded-lg shadow-2xl border-4 border-white touch-none" loading="lazy">
-                    <div class="close-btn" onclick="hideImage()">
-                        <i class="fas fa-times text-lg"></i>
-                    </div>
-                </div>
-                <div class="absolute bottom-4 left-0 right-0 flex justify-center gap-4">
-                    <button onclick="hideImage()" class="bg-gray-800 hover:bg-gray-900 text-white font-medium py-2 px-6 rounded-full shadow-md transition-all duration-300 hover:scale-105">
-                        <i class="fas fa-times mr-2"></i> Close
-                    </button>
-                </div>
-            </div>   
-        </div>
-    </div>
-    
-    <script>
-// Application state
-let currentView = 'start';
-let selectedYear = null;
-
-// Image viewer state
-let currentScale = 1;
-let lastScale = 1;
-let currentX = 0;
-let currentY = 0;
-let lastX = 0;
-let lastY = 0;
-let hammer = null;
-
-// Subject data with icons and Image links
-const subjects = {
-    'Mathematics': { icon: 'fas fa-calculator', color: '#000000' },
-    'Physics Sciences': { icon: 'fas fa-atom', color: '#e74c3c' },
-    'Natural Science': { icon: 'fas fa-dna', color: '#27ae60' },
-    'Arabic language': { icon: 'fas fa-book', color: '#9b59b6' },
-    'History and Geography': { icon: 'fas fa-landmark', color: '#f39c12' },
-    'Islamic Sciences': { icon: 'fas fa-globe', color: '#1abc9c' },
-    'Philosophy': { icon: 'fas fa-brain', color: '#34495e' },
-    'French language': { icon: 'fas fa-language', color: '#e67e22' },
-    'English language': { icon: 'fas fa-language', color: '#8e44ad' },
-    'Amazigh language': { icon: 'fas fa-language', color: '#2ecc71' },
-};
-
-// Generate Image URLs (placeholder - replace with actual URLs)
-function generateImageUrl(year, subject, type) {
-    // Replace this with your actual Image hosting URLs
-    const baseUrl = 'https://imado-imad.github.io/bac1/images';
-    const subjectCode = subject.toLowerCase().replace(/\s+/g, '-');
-    return `${baseUrl}/${year}-${subjectCode}-${type}.jpg`;
-}
-
-// DOM Elements
-const startScreen = document.getElementById('start-screen');
-const mainApp = document.getElementById('main-app');
-const enterBtn = document.getElementById('enter-btn');
-const yearsView = document.getElementById('years-view');
-const subjectsView = document.getElementById('subjects-view');
-const yearsGrid = document.getElementById('years-grid');
-const subjectsGrid = document.getElementById('subjects-grid');
-const backBtn = document.getElementById('back-btn');
-const selectedYearElement = document.getElementById('selected-year');
-const homeBtn = document.getElementById('home-btn');
-const aboutBtn = document.getElementById('about-btn');
-const imageViewer = document.getElementById('image-viewer');
-const displayedImage = document.getElementById('displayed-image');
-const imageContainer = document.getElementById('imageContainer');
-const imageBlock = document.getElementById('imageBlock');
-
-// Initialize application
-function init() {
-    createParticles();
-    generateYears();
-    setupEventListeners();
-}
-
-// Create animated particles for start screen
-function createParticles() {
-    const particlesContainer = document.querySelector('.particles');
-    for (let i = 0; i < 50; i++) {
-        const particle = document.createElement('div');
-        particle.style.cssText = `
+    <style>
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .close-btn {
             position: absolute;
-            width: 4px;
-            height: 4px;
-            background: rgba(255, 255, 255, 0.5);
+            top: 1rem;
+            right: 1rem;
+            width: 40px;
+            height: 40px;
+            background-color: #ef4444;
+            color: white;
             border-radius: 50%;
-            left: ${Math.random() * 100}%;
-            top: ${Math.random() * 100}%;
-            animation: float ${3 + Math.random() * 4}s ease-in-out infinite;
-            animation-delay: ${Math.random() * 2}s;
-        `;
-        particlesContainer.appendChild(particle);
-    }
-}
-
-// Generate years grid (2008-2025)
-function generateYears() {
-    yearsGrid.innerHTML = '';
-    const currentYear = new Date().getFullYear();
-    
-    for (let year = 2008; year <= 2025; year++) {
-        const yearCard = document.createElement('div');
-        yearCard.className = 'year-card fade-in-up';
-        yearCard.style.animationDelay = `${(year - 2008) * 0.1}s`;
-        
-        const isCurrentYear = year === currentYear;
-        const isFutureYear = year > currentYear;
-        
-        yearCard.innerHTML = `
-            <div class="year-icon">
-                <i class="${getYearIcon(year)}"></i>
-            </div>
-            <div class="year-number">${year}</div>
-            <div class="year-label">
-                ${isCurrentYear ? 'Current Year' : isFutureYear ? 'Upcoming' : 'Past Exam'}
-            </div>
-        `;
-        
-        yearCard.addEventListener('click', () => showSubjects(year));
-        yearsGrid.appendChild(yearCard);
-    }
-}
-
-// Get appropriate icon for year
-function getYearIcon(year) {
-    const icons = [
-        'fas fa-graduation-cap',
-        'fas fa-medal',
-        'fas fa-trophy',
-        'fas fa-star',
-        'fas fa-crown',
-        'fas fa-gem'
-    ];
-    return icons[year % icons.length];
-}
-
-// Show subjects for selected year
-function showSubjects(year) {
-    selectedYear = year;
-    selectedYearElement.textContent = year;
-    
-    // Generate subjects grid
-    subjectsGrid.innerHTML = '';
-    
-    Object.entries(subjects).forEach(([subjectName, subjectData], index) => {
-        const subjectCard = document.createElement('div');
-        subjectCard.className = 'subject-card fade-in-up';
-        subjectCard.style.animationDelay = `${index * 0.1}s`;
-        
-        subjectCard.innerHTML = `
-            <div class="subject-header">
-                <div class="subject-icon">
-                    <i class="${subjectData.icon}" style="color: ${subjectData.color}"></i>
-                </div>
-                <div class="subject-info">
-                    <h3>${subjectName}</h3>
-                    <p>Baccalaureate ${year}</p>
-                </div>
-            </div>
-            <div class="subject-actions">
-                <button class="action-btn primary" onclick="openImage('${year}', '${subjectName}', 'exam')">
-                    <i class="fas fa-file-pdf"></i>
-                    <span>View Exam</span>
-                </button>
-                <button class="action-btn secondary" onclick="openImage('${year}', '${subjectName}', 'solution')">
-                    <i class="fas fa-key"></i>
-                    <span>View Solution</span>
-                </button>
-            </div>
-        `;
-        
-        subjectsGrid.appendChild(subjectCard);
-    });
-    
-    // Switch views
-    yearsView.classList.add('hidden');
-    subjectsView.classList.remove('hidden');
-    currentView = 'subjects';
-}
-
-// Initialize Hammer.js for image gestures
-function initImageGestures() {
-    const image = document.getElementById('displayed-image');
-    const imageBlock = document.getElementById('imageBlock');
-    
-    // Create Hammer manager
-    hammer = new Hammer.Manager(image, {
-        recognizers: [
-            [Hammer.Pan, { threshold: 0 }],
-            [Hammer.Pinch],
-            [Hammer.Tap, { event: 'doubletap', taps: 2 }]
-        ]
-    });
-    
-    // Reset transforms when hiding image
-    imageViewer.addEventListener('transitionend', function(e) {
-        if (imageViewer.classList.contains('hidden')) {
-            resetImageTransform();
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            z-index: 10;
         }
-    });
-    
-    // Pan gesture
-    hammer.on('panstart panmove', function(e) {
-        if (currentScale <= 1) return;
         
-        const deltaX = e.deltaX - lastX;
-        const deltaY = e.deltaY - lastY;
-        
-        lastX = e.deltaX;
-        lastY = e.deltaY;
-        
-        currentX += deltaX;
-        currentY += deltaY;
-        
-        applyImageTransform();
-    });
-    
-    hammer.on('panend', function() {
-        lastX = 0;
-        lastY = 0;
-        checkBounds();
-    });
-    
-    // Pinch zoom gesture
-    hammer.on('pinchstart', function() {
-        lastScale = currentScale;
-    });
-    
-    hammer.on('pinchmove', function(e) {
-        currentScale = Math.max(1, Math.min(lastScale * e.scale, 5));
-        applyImageTransform();
-    });
-    
-    hammer.on('pinchend', function() {
-        checkBounds();
-    });
-    
-    // Double tap to zoom
-    hammer.on('doubletap', function(e) {
-        if (currentScale > 1) {
-            resetImageTransform();
-        } else {
-            currentScale = 2;
-            applyImageTransform();
-            
-            // Center on tap point
-            const rect = image.getBoundingClientRect();
-            const centerX = e.center.x - rect.left;
-            const centerY = e.center.y - rect.top;
-            
-            currentX = (imageBlock.clientWidth / 2 - centerX) * currentScale;
-            currentY = (imageBlock.clientHeight / 2 - centerY) * currentScale;
-            
-            applyImageTransform();
-            checkBounds();
+        .close-btn:hover {
+            background-color: #dc2626;
+            transform: scale(1.1);
         }
-    });
-    
-    // Prevent native touch behaviors
-    image.addEventListener('touchmove', function(e) {
-        if (currentScale > 1) {
-            e.preventDefault();
+        #Cover1 {
+            transition: opacity 0.3s ease;
+            z-index: 1000;
+            overflow: auto;
         }
-    }, { passive: false });
-}
-
-// Apply transform to image
-function applyImageTransform() {
-    const image = document.getElementById('displayed-image');
-    image.style.transform = `translate(${currentX}px, ${currentY}px) scale(${currentScale})`;
-}
-
-// Reset image transform
-function resetImageTransform() {
-    currentScale = 1;
-    currentX = 0;
-    currentY = 0;
-    applyImageTransform();
-}
-
-// Ensure image stays within bounds
-function checkBounds() {
-    const image = document.getElementById('displayed-image');
-    const imageBlock = document.getElementById('imageBlock');
-    const rect = image.getBoundingClientRect();
-    
-    const maxX = (rect.width - imageBlock.clientWidth) / 2;
-    const maxY = (rect.height - imageBlock.clientHeight) / 2;
-    
-    currentX = Math.min(Math.max(currentX, -maxX), maxX);
-    currentY = Math.min(Math.max(currentY, -maxY), maxY);
-    
-    applyImageTransform();
-}
-
-// Open image in viewer
-function openImage(year, subject, type) {
-    const imageUrl = generateImageUrl(year, subject, type);
-    showImage(imageUrl, `${year} ${subject} ${type}`);
-}
-
-// Show image in viewer
-function showImage(url, altText) {
-    resetImageTransform();
-    displayedImage.src = url;
-    displayedImage.alt = altText;
-    imageViewer.classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
-    
-    // Initialize gestures if not already done
-    if (!hammer) {
-        initImageGestures();
-    }
-}
-
-// Hide image viewer
-function hideImage() { 
-    imageViewer.classList.add('hidden');
-    document.body.style.overflow = 'auto';
-}
-
-// Setup event listeners
-function setupEventListeners() {
-    // Enter button
-    enterBtn.addEventListener('click', () => {
-        startScreen.classList.add('fade-out');
-        setTimeout(() => {
-            startScreen.classList.add('hidden');
-            mainApp.classList.remove('hidden');
-            currentView = 'years';
-        }, 800);
-    });
-    
-    // Back button
-    backBtn.addEventListener('click', () => {
-        subjectsView.classList.add('hidden');
-        yearsView.classList.remove('hidden');
-        currentView = 'years';
-    });
-    
-    // Home button
-    homeBtn.addEventListener('click', () => {
-        if (currentView === 'subjects') {
-            subjectsView.classList.add('hidden');
-            yearsView.classList.remove('hidden');
-            currentView = 'years';
+        #Cover1:not(.hidden) {
+            display: flex;
+            align-items: flex-start;
+            padding: 0rem;
         }
-    });
-    
-    // About button
-    aboutBtn.addEventListener('click', () => {
-        alert('Baccalaureate Portal\n\nAccess exam subjects from 2008 to 2025\n\nDeveloped for educational purposes');
-    });
-    
-    // Keyboard navigation
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            if (!imageViewer.classList.contains('hidden')) {
-                hideImage();
-            } else if (currentView === 'subjects') {
-                backBtn.click();
+        .image-wrapper {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+            max-width: 100%;
+            overflow: hidden;
+            touch-action: none;
+        }
+        
+        #displayedImage {
+            transition: transform 0.3s ease;
+            width: 100%;
+            height: auto;
+            display: block;
+            transform-origin: 0 0;
+            will-change: transform;
+        }
+        
+        .zoomed {
+            cursor: zoom-out;
+        }
+        
+        @media (max-width: 640px) {
+            .close-btn {
+                width: 30px;
+                height: 30px;
+                top: 0.5rem;
+                right: 0.5rem;
+            }
+            .image-wrapper {
+                cursor: zoom-in;
             }
         }
-    });
-}
+    </style>
+</head>
+<body>
+        <button 
+            id="revealButton"
+            class="bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600 text-white font-bold py-4 px-8 rounded-full shadow-lg transform transition-all duration-300 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-purple-300 pulse mb-8"
+            onclick="revealImage()"
+        >
+            <span class="text-xl md:text-2xl">Reveal Image</span>
+            <i class="fas fa-image ml-2"></i>
+        </button>
 
-// Add CSS animations
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideInRight {
-        from { transform: translateX(100%); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
-    }
-    
-    @keyframes slideOutRight {
-        from { transform: translateX(0); opacity: 1; }
-        to { transform: translateX(100%); opacity: 0; }
-    }
-`;
-document.head.appendChild(style);
+        <div id="Cover1" class="hidden fixed inset-0  bg-gradient-to-br from-blue-50 to-purple-50  justify-center p-0">
+        <div id="Cover2" class="text-center w-full max-w-3xl">
+        <div id="imageContainer" class="w-full">
+            <div class="image-wrapper relative">
+                <img 
+                    id="displayedImage"
+                    src="https://imado-imad.github.io/bac/images/2024-mathematics-exam.jpg" 
+                    alt="2024 Mathematics Exam"
+                    class="w-full h-auto rounded-lg shadow-2xl border-4 border-white fade-in"
+                    loading="lazy"
+                >
+                <div class="close-btn" onclick="hideImage()">
+                    <i class="fas fa-times text-lg"></i>
+                </div>
+            </div>
+            <div class="flex justify-center gap-4 mt-0">
+                <button 
+                    onclick="hideImage()"
+                    class="bg-gray-800 hover:bg-gray-900 text-white font-medium py-2 px-6 rounded-full shadow-md transition-all duration-300 hover:scale-105"
+                >
+                    <i class="fas fa-times mr-2"></i> Hide Image
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
-// Initialize when DOM is loaded
-document.addEventListener('DOMContentLoaded', init);
+    <script>
+        const Cover1 = document.getElementById('Cover1');
+        const imageContainer = document.getElementById('imageContainer');
+        const button = document.getElementById('revealButton');
+        const image = document.getElementById('displayedImage');
+        const imageWrapper = document.querySelector('.image-wrapper');
+        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints;
+
+        // Image transform state
+        let currentScale = 1;
+        let currentPosX = 0;
+        let currentPosY = 0;
+        let minScale = 1;
+        let maxScale = 3;
+
+        function revealImage() {
+            Cover1.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            // Reset transform when revealing image
+            resetImageTransform();
+        }
+        
+        function hideImage() {
+            Cover1.classList.add('hidden');
+            document.body.style.overflow = 'auto';
+            // Reset transform when hiding image
+            resetImageTransform();
+        }
+
+        function resetImageTransform() {
+            currentScale = 1;
+            currentPosX = 0;
+            currentPosY = 0;
+            updateImageTransform();
+        }
+
+        function updateImageTransform() {
+            image.style.transform = `translate(${currentPosX}px, ${currentPosY}px) scale(${currentScale})`;
+            
+            // Toggle zoomed class based on scale
+            if (currentScale > 1) {
+                image.classList.add('zoomed');
+            } else {
+                image.classList.remove('zoomed');
+            }
+        }
+
+        function applyBoundaries() {
+            const imgWidth = image.offsetWidth * currentScale;
+            const imgHeight = image.offsetHeight * currentScale;
+            const wrapperWidth = imageWrapper.offsetWidth;
+            const wrapperHeight = imageWrapper.offsetHeight;
+
+            // Calculate max translation to keep image within bounds
+            const maxX = Math.max((imgWidth - wrapperWidth) / 2, 0);
+            const minX = -maxX;
+            const maxY = Math.max((imgHeight - wrapperHeight) / 2, 0);
+            const minY = -maxY;
+
+            // Apply boundaries
+            currentPosX = Math.min(Math.max(currentPosX, minX), maxX);
+            currentPosY = Math.min(Math.max(currentPosY, minY), maxY);
+
+            updateImageTransform();
+        }
+
+        // Only enable gestures for touch devices
+        if (isTouchDevice) {
+            // Initialize Hammer.js
+            const hammer = new Hammer(imageWrapper);
+            hammer.get('pinch').set({ enable: true });
+            hammer.get('pan').set({ direction: Hammer.DIRECTION_ALL });
+
+            let initialScale;
+            let initialDistance;
+            let lastPosX = 0;
+            let lastPosY = 0;
+
+            // Pinch to zoom
+            hammer.on('pinchstart', function(e) {
+                initialScale = currentScale;
+            });
+
+            hammer.on('pinch', function(e) {
+                currentScale = Math.min(Math.max(initialScale * e.scale, minScale), maxScale);
+                updateImageTransform();
+            });
+
+            hammer.on('pinchend', function() {
+                applyBoundaries();
+            });
+
+            // Pan to move
+            hammer.on('panstart', function(e) {
+                lastPosX = currentPosX;
+                lastPosY = currentPosY;
+            });
+
+            hammer.on('pan', function(e) {
+                if (currentScale > 1) {
+                    currentPosX = lastPosX + e.deltaX;
+                    currentPosY = lastPosY + e.deltaY;
+                    updateImageTransform();
+                }
+            });
+
+            hammer.on('panend', function() {
+                applyBoundaries();
+            });
+
+            // Double tap to zoom in/out
+            hammer.on('doubletap', function(e) {
+                if (currentScale === 1) {
+                    currentScale = 2;
+                    // Center on tap point
+                    const rect = imageWrapper.getBoundingClientRect();
+                    const centerX = e.center.x - rect.left;
+                    const centerY = e.center.y - rect.top;
+                    
+                    // Calculate new position to center on tap point
+                    currentPosX = (imageWrapper.offsetWidth / 2 - centerX) * 2;
+                    currentPosY = (imageWrapper.offsetHeight / 2 - centerY) * 2;
+                } else {
+                    resetImageTransform();
+                }
+                applyBoundaries();
+            });
+        }
+
+        // Reset transform on window resize
+        window.addEventListener('resize', function() {
+            if (currentScale > 1) {
+                applyBoundaries();
+            }
+        });
     </script>
 </body>
 </html>
