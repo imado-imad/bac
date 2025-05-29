@@ -65,6 +65,7 @@
             width: 100%;
             max-width: 100%;
             overflow: hidden;
+            cursor: zoom-in;
             touch-action: none;
         }
         
@@ -74,7 +75,8 @@
             height: auto;
             display: block;
             transform-origin: 0 0;
-            will-change: transform;
+            touch-action: none;
+            user-select: none;
         }
         
         .zoomed {
@@ -88,183 +90,193 @@
                 top: 0.5rem;
                 right: 0.5rem;
             }
-            .image-wrapper {
-                cursor: zoom-in;
-            }
         }
     </style>
 </head>
 <body>
-        <button 
-            id="revealButton"
-            class="bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600 text-white font-bold py-4 px-8 rounded-full shadow-lg transform transition-all duration-300 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-purple-300 pulse mb-8"
-            onclick="revealImage()"
-        >
-            <span class="text-xl md:text-2xl">Reveal Image</span>
-            <i class="fas fa-image ml-2"></i>
-        </button>
+    <button 
+        id="revealButton"
+        class="bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600 text-white font-bold py-4 px-8 rounded-full shadow-lg transform transition-all duration-300 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-purple-300 pulse mb-8"
+        onclick="revealImage()"
+    >
+        <span class="text-xl md:text-2xl">Reveal Image</span>
+        <i class="fas fa-image ml-2"></i>
+    </button>
 
-        <div id="Cover1" class="hidden fixed inset-0  bg-gradient-to-br from-blue-50 to-purple-50  justify-center p-0">
-        <div id="Cover2" class="text-center w-full max-w-3xl">
-        <div id="imageContainer" class="w-full">
-            <div class="image-wrapper relative">
-                <img 
-                    id="displayedImage"
-                    src="https://imado-imad.github.io/bac/images/2024-mathematics-exam.jpg" 
-                    alt="2024 Mathematics Exam"
-                    class="w-full h-auto rounded-lg shadow-2xl border-4 border-white fade-in"
-                    loading="lazy"
-                >
-                <div class="close-btn" onclick="hideImage()">
-                    <i class="fas fa-times text-lg"></i>
+    <div id="Cover1" class="hidden fixed inset-0 bg-black bg-opacity-90 justify-center">
+        <div id="Cover2" class="text-center w-full max-w-4xl h-full flex items-center justify-center">
+            <div id="imageContainer" class="relative w-full h-full overflow-hidden touch-none">
+                <div class="image-wrapper relative w-full h-full justify-center">
+                    <img 
+                        id="displayedImage"
+                        src="https://imado-imad.github.io/bac/images/2024-mathematics-exam.jpg" 
+                        alt="2024 Mathematics Exam"
+                        class="max-w-full h-full rounded-lg shadow-2xl border-4 border-white touch-none fade-in"
+                        loading="lazy"
+                    >
+                    <div class="close-btn" onclick="hideImage()">
+                        <i class="fas fa-times text-lg"></i>
+                    </div>
                 </div>
-            </div>
-            <div class="flex justify-center gap-4 mt-0">
-                <button 
-                    onclick="hideImage()"
-                    class="bg-gray-800 hover:bg-gray-900 text-white font-medium py-2 px-6 rounded-full shadow-md transition-all duration-300 hover:scale-105"
-                >
-                    <i class="fas fa-times mr-2"></i> Hide Image
-                </button>
+                <div class="absolute bottom-4 left-0 right-0 flex justify-center gap-4">
+                    <button 
+                        onclick="hideImage()"
+                        class="bg-gray-800 hover:bg-gray-900 text-white font-medium py-2 px-6 rounded-full shadow-md transition-all duration-300 hover:scale-105"
+                    >
+                        <i class="fas fa-times mr-2"></i> Hide Image
+                    </button>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
     <script>
+        let isZoomed = false;
+        let currentScale = 1;
+        let posX = 0;
+        let posY = 0;
+        let lastPosX = 0;
+        let lastPosY = 0;
+        let lastScale = 1;
+        let maxPosX = 0;
+        let maxPosY = 0;
+        let minPosX = 0;
+        let minPosY = 0;
+        
         const Cover1 = document.getElementById('Cover1');
         const imageContainer = document.getElementById('imageContainer');
         const button = document.getElementById('revealButton');
         const image = document.getElementById('displayedImage');
-        const imageWrapper = document.querySelector('.image-wrapper');
-        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints;
-
-        // Image transform state
-        let currentScale = 1;
-        let currentPosX = 0;
-        let currentPosY = 0;
-        let minScale = 1;
-        let maxScale = 3;
-
+        
+        // Initialize Hammer.js for touch gestures
+        const mc = new Hammer.Manager(image);
+        
+        // Enable pinch and pan
+        mc.add(new Hammer.Pinch({ threshold: 0 }));
+        mc.add(new Hammer.Pan({ threshold: 0, pointers: 0 }));
+        
+        // Calculate max/min positions based on current scale
+        function calculateBounds() {
+            const imgWidth = image.offsetWidth;
+            const imgHeight = image.offsetHeight;
+            const containerWidth = imageContainer.offsetWidth;
+            const containerHeight = imageContainer.offsetHeight;
+            
+            if (currentScale > 1) {
+                maxPosX = (imgWidth * currentScale - containerWidth) / 2;
+                minPosX = -maxPosX;
+                maxPosY = (imgHeight * currentScale - containerHeight) / 2;
+                minPosY = -maxPosY;
+            } else {
+                maxPosX = 0;
+                minPosX = 0;
+                maxPosY = 0;
+                minPosY = 0;
+                posX = 0;
+                posY = 0;
+            }
+        }
+        
+        // Update image transform
+        function updateImageTransform() {
+            image.style.transform = `translate(${posX}px, ${posY}px) scale(${currentScale})`;
+        }
+        
+        // Double tap handler
+        mc.on("doubletap", function(e) {
+            if (currentScale === 1) {
+                currentScale = 2;
+                isZoomed = true;
+                image.classList.add('zoomed');
+            } else {
+                currentScale = 1;
+                isZoomed = false;
+                posX = 0;
+                posY = 0;
+                image.classList.remove('zoomed');
+            }
+            calculateBounds();
+            updateImageTransform();
+        });
+        
+        // Pinch zoom handler
+        mc.on("pinchmove", function(e) {
+            currentScale = Math.max(1, lastScale * e.scale);
+            calculateBounds();
+            updateImageTransform();
+        });
+        
+        mc.on("pinchend", function() {
+            lastScale = currentScale;
+            if (currentScale > 1) {
+                isZoomed = true;
+                image.classList.add('zoomed');
+            } else {
+                isZoomed = false;
+                currentScale = 1;
+                posX = 0;
+                posY = 0;
+                image.classList.remove('zoomed');
+            }
+            calculateBounds();
+            updateImageTransform();
+        });
+        
+        // Pan handler
+        mc.on("panmove", function(e) {
+            if (currentScale > 1) {
+                posX = lastPosX + e.deltaX;
+                posY = lastPosY + e.deltaY;
+                
+                // Boundary checks
+                posX = Math.min(maxPosX, Math.max(minPosX, posX));
+                posY = Math.min(maxPosY, Math.max(minPosY, posY));
+                
+                updateImageTransform();
+            }
+        });
+        
+        mc.on("panend", function() {
+            lastPosX = posX;
+            lastPosY = posY;
+        });
+        
         function revealImage() {
             Cover1.classList.remove('hidden');
             document.body.style.overflow = 'hidden';
-            // Reset transform when revealing image
-            resetImageTransform();
+            
+            // Reset image state
+            currentScale = 1;
+            posX = 0;
+            posY = 0;
+            lastPosX = 0;
+            lastPosY = 0;
+            lastScale = 1;
+            image.classList.remove('zoomed');
+            updateImageTransform();
         }
         
         function hideImage() {
             Cover1.classList.add('hidden');
             document.body.style.overflow = 'auto';
-            // Reset transform when hiding image
-            resetImageTransform();
         }
-
-        function resetImageTransform() {
-            currentScale = 1;
-            currentPosX = 0;
-            currentPosY = 0;
-            updateImageTransform();
-        }
-
-        function updateImageTransform() {
-            image.style.transform = `translate(${currentPosX}px, ${currentPosY}px) scale(${currentScale})`;
-            
-            // Toggle zoomed class based on scale
-            if (currentScale > 1) {
-                image.classList.add('zoomed');
-            } else {
-                image.classList.remove('zoomed');
-            }
-        }
-
-        function applyBoundaries() {
-            const imgWidth = image.offsetWidth * currentScale;
-            const imgHeight = image.offsetHeight * currentScale;
-            const wrapperWidth = imageWrapper.offsetWidth;
-            const wrapperHeight = imageWrapper.offsetHeight;
-
-            // Calculate max translation to keep image within bounds
-            const maxX = Math.max((imgWidth - wrapperWidth) / 2, 0);
-            const minX = -maxX;
-            const maxY = Math.max((imgHeight - wrapperHeight) / 2, 0);
-            const minY = -maxY;
-
-            // Apply boundaries
-            currentPosX = Math.min(Math.max(currentPosX, minX), maxX);
-            currentPosY = Math.min(Math.max(currentPosY, minY), maxY);
-
-            updateImageTransform();
-        }
-
-        // Only enable gestures for touch devices
-        if (isTouchDevice) {
-            // Initialize Hammer.js
-            const hammer = new Hammer(imageWrapper);
-            hammer.get('pinch').set({ enable: true });
-            hammer.get('pan').set({ direction: Hammer.DIRECTION_ALL });
-
-            let initialScale;
-            let initialDistance;
-            let lastPosX = 0;
-            let lastPosY = 0;
-
-            // Pinch to zoom
-            hammer.on('pinchstart', function(e) {
-                initialScale = currentScale;
-            });
-
-            hammer.on('pinch', function(e) {
-                currentScale = Math.min(Math.max(initialScale * e.scale, minScale), maxScale);
-                updateImageTransform();
-            });
-
-            hammer.on('pinchend', function() {
-                applyBoundaries();
-            });
-
-            // Pan to move
-            hammer.on('panstart', function(e) {
-                lastPosX = currentPosX;
-                lastPosY = currentPosY;
-            });
-
-            hammer.on('pan', function(e) {
-                if (currentScale > 1) {
-                    currentPosX = lastPosX + e.deltaX;
-                    currentPosY = lastPosY + e.deltaY;
-                    updateImageTransform();
-                }
-            });
-
-            hammer.on('panend', function() {
-                applyBoundaries();
-            });
-
-            // Double tap to zoom in/out
-            hammer.on('doubletap', function(e) {
-                if (currentScale === 1) {
-                    currentScale = 2;
-                    // Center on tap point
-                    const rect = imageWrapper.getBoundingClientRect();
-                    const centerX = e.center.x - rect.left;
-                    const centerY = e.center.y - rect.top;
-                    
-                    // Calculate new position to center on tap point
-                    currentPosX = (imageWrapper.offsetWidth / 2 - centerX) * 2;
-                    currentPosY = (imageWrapper.offsetHeight / 2 - centerY) * 2;
-                } else {
-                    resetImageTransform();
-                }
-                applyBoundaries();
-            });
-        }
-
-        // Reset transform on window resize
+        
+        // Make sure image stays responsive on window resize
         window.addEventListener('resize', function() {
-            if (currentScale > 1) {
-                applyBoundaries();
+            if (image && currentScale > 1) {
+                calculateBounds();
+                
+                // Adjust position if out of bounds after resize
+                posX = Math.min(maxPosX, Math.max(minPosX, posX));
+                posY = Math.min(maxPosY, Math.max(minPosY, posY));
+                
+                updateImageTransform();
             }
+        });
+        
+        // Initialize bounds when image loads
+        image.addEventListener('load', function() {
+            calculateBounds();
         });
     </script>
 </body>
