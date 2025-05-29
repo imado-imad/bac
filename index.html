@@ -7,6 +7,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
 <style>
    * {
     margin: 0;
@@ -405,6 +406,93 @@ body {
     animation: fadeInUp 0.6s ease forwards;
 }
 
+/* Image Viewer Styles */
+.fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.pulse {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.close-btn {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 40px;
+    height: 40px;
+    background-color: #ef4444;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    z-index: 1500;
+}
+
+.close-btn:hover {
+    background-color: #dc2626;
+    transform: scale(1.1);
+}
+
+#image-viewer {
+    transition: opacity 0.3s ease;
+    z-index: 1000;
+    overflow: auto;
+    touch-action: none;
+    overscroll-behavior: contain;
+}
+
+#image-viewer:not(.hidden) {
+    display: flex;
+    align-items: flex-start;
+    padding: 0rem;
+}
+
+.image-wrapper {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    margin: auto;
+    touch-action: none;
+}
+
+#displayed-image {
+    width: 100%;
+    height: auto;
+    display: block;
+    max-height: none;
+    transform-origin: center center;
+    transition: transform 0.1s ease-out;
+    will-change: transform;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+#imageBlock {
+    touch-action: none;
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .container {
@@ -472,86 +560,18 @@ body {
     .logo span {
         display: none;
     }
-} 
-/*----------------------------------------------*/
-.fade-in {
-            animation: fadeIn 0.5s ease-in-out;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        
-        .pulse {
-            animation: pulse 2s infinite;
-        }
-        
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
-        
-        .close-btn {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            width: 40px;
-            height: 40px;
-            background-color: #ef4444;
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s ease;
-            z-index: 1500;
-        }
-        
-        .close-btn:hover {
-            background-color: #dc2626;
-            transform: scale(1.1);
-        }
-        #image-viewer {
-            transition: opacity 0.3s ease;
-            z-index: 1000;
-            overflow: auto;
-        }
-        #image-viewer:not(.hidden) {
-            display: flex;
-            align-items: flex-start;
-            padding: 0rem;
-        }
-        .image-wrapper {
-            position: relative;
-            display: inline-block;
-            width: 100%;
-            max-width: 100%;
-            overflow: hidden;
-            margin: auto;
-        }
-        
-        #displayed-image {
-            width: 100%;
-            height: auto;
-            display: block;
-            max-height: none;
-        }
-        @media (max-width: 640px) {
-            .close-btn {
-                width: 30px;
-                height: 30px;
-                top: 0.5rem;
-                right: 0.5rem;
-            }
-            #image-viewer {
-                padding: 0rem;
-            }
-        }
-     
+    
+    .close-btn {
+        width: 30px;
+        height: 30px;
+        top: 0.5rem;
+        right: 0.5rem;
+    }
+    
+    #image-viewer {
+        padding: 0rem;
+    }
+}
 </style>
 </head>
 <body>
@@ -590,7 +610,7 @@ body {
                     </button>
                 </nav>
             </div>
-</header>
+        </header>
 
         <!-- Years Grid -->
         <main id="years-view" class="years-view">
@@ -614,8 +634,8 @@ body {
                         <span>Back to Years</span>
                     </button>
                     <div class="year-info">
-                    <h1 id="selected-year">2025</h1>
-                    <p>Baccalaureate Subjects</p>
+                        <h1 id="selected-year">2025</h1>
+                        <p>Baccalaureate Subjects</p>
                     </div>
                 </div>
                 <div id="subjects-grid" class="subjects-grid">
@@ -626,15 +646,15 @@ body {
     </div>
        
     <div id="image-viewer" class="hidden fixed inset-0 bg-black bg-opacity-90 justify-center">
-        <div id="imageContainer" class="text-center w-full max-w-4xl">
-            <div id="imageBlock" class="relative w-full">
-                <div class="image-wrapper relative">
-                    <img id="displayed-image" class="w-full h-auto rounded-lg shadow-2xl border-4 border-white" loading="lazy">
+        <div id="imageContainer" class="text-center w-full max-w-4xl h-full flex items-center justify-center">
+            <div id="imageBlock" class="relative w-full h-full overflow-hidden touch-none">
+                <div class="image-wrapper relative w-full h-full flex items-center justify-center">
+                    <img id="displayed-image" class="max-w-full max-h-full rounded-lg shadow-2xl border-4 border-white touch-none" loading="lazy">
                     <div class="close-btn" onclick="hideImage()">
                         <i class="fas fa-times text-lg"></i>
                     </div>
                 </div>
-                <div class="flex justify-center gap-4 mt-4">
+                <div class="absolute bottom-4 left-0 right-0 flex justify-center gap-4">
                     <button onclick="hideImage()" class="bg-gray-800 hover:bg-gray-900 text-white font-medium py-2 px-6 rounded-full shadow-md transition-all duration-300 hover:scale-105">
                         <i class="fas fa-times mr-2"></i> Close
                     </button>
@@ -643,11 +663,19 @@ body {
         </div>
     </div>
     
-    
     <script>
 // Application state
 let currentView = 'start';
 let selectedYear = null;
+
+// Image viewer state
+let currentScale = 1;
+let lastScale = 1;
+let currentX = 0;
+let currentY = 0;
+let lastX = 0;
+let lastY = 0;
+let hammer = null;
 
 // Subject data with icons and Image links
 const subjects = {
@@ -682,6 +710,7 @@ const subjectsGrid = document.getElementById('subjects-grid');
 const backBtn = document.getElementById('back-btn');
 const selectedYearElement = document.getElementById('selected-year');
 const homeBtn = document.getElementById('home-btn');
+const aboutBtn = document.getElementById('about-btn');
 const imageViewer = document.getElementById('image-viewer');
 const displayedImage = document.getElementById('displayed-image');
 const imageContainer = document.getElementById('imageContainer');
@@ -799,19 +828,142 @@ function showSubjects(year) {
     currentView = 'subjects';
 }
 
-//image-viewer
+// Initialize Hammer.js for image gestures
+function initImageGestures() {
+    const image = document.getElementById('displayed-image');
+    const imageBlock = document.getElementById('imageBlock');
+    
+    // Create Hammer manager
+    hammer = new Hammer.Manager(image, {
+        recognizers: [
+            [Hammer.Pan, { threshold: 0 }],
+            [Hammer.Pinch],
+            [Hammer.Tap, { event: 'doubletap', taps: 2 }]
+        ]
+    });
+    
+    // Reset transforms when hiding image
+    imageViewer.addEventListener('transitionend', function(e) {
+        if (imageViewer.classList.contains('hidden')) {
+            resetImageTransform();
+        }
+    });
+    
+    // Pan gesture
+    hammer.on('panstart panmove', function(e) {
+        if (currentScale <= 1) return;
+        
+        const deltaX = e.deltaX - lastX;
+        const deltaY = e.deltaY - lastY;
+        
+        lastX = e.deltaX;
+        lastY = e.deltaY;
+        
+        currentX += deltaX;
+        currentY += deltaY;
+        
+        applyImageTransform();
+    });
+    
+    hammer.on('panend', function() {
+        lastX = 0;
+        lastY = 0;
+        checkBounds();
+    });
+    
+    // Pinch zoom gesture
+    hammer.on('pinchstart', function() {
+        lastScale = currentScale;
+    });
+    
+    hammer.on('pinchmove', function(e) {
+        currentScale = Math.max(1, Math.min(lastScale * e.scale, 5));
+        applyImageTransform();
+    });
+    
+    hammer.on('pinchend', function() {
+        checkBounds();
+    });
+    
+    // Double tap to zoom
+    hammer.on('doubletap', function(e) {
+        if (currentScale > 1) {
+            resetImageTransform();
+        } else {
+            currentScale = 2;
+            applyImageTransform();
+            
+            // Center on tap point
+            const rect = image.getBoundingClientRect();
+            const centerX = e.center.x - rect.left;
+            const centerY = e.center.y - rect.top;
+            
+            currentX = (imageBlock.clientWidth / 2 - centerX) * currentScale;
+            currentY = (imageBlock.clientHeight / 2 - centerY) * currentScale;
+            
+            applyImageTransform();
+            checkBounds();
+        }
+    });
+    
+    // Prevent native touch behaviors
+    image.addEventListener('touchmove', function(e) {
+        if (currentScale > 1) {
+            e.preventDefault();
+        }
+    }, { passive: false });
+}
+
+// Apply transform to image
+function applyImageTransform() {
+    const image = document.getElementById('displayed-image');
+    image.style.transform = `translate(${currentX}px, ${currentY}px) scale(${currentScale})`;
+}
+
+// Reset image transform
+function resetImageTransform() {
+    currentScale = 1;
+    currentX = 0;
+    currentY = 0;
+    applyImageTransform();
+}
+
+// Ensure image stays within bounds
+function checkBounds() {
+    const image = document.getElementById('displayed-image');
+    const imageBlock = document.getElementById('imageBlock');
+    const rect = image.getBoundingClientRect();
+    
+    const maxX = (rect.width - imageBlock.clientWidth) / 2;
+    const maxY = (rect.height - imageBlock.clientHeight) / 2;
+    
+    currentX = Math.min(Math.max(currentX, -maxX), maxX);
+    currentY = Math.min(Math.max(currentY, -maxY), maxY);
+    
+    applyImageTransform();
+}
+
+// Open image in viewer
 function openImage(year, subject, type) {
     const imageUrl = generateImageUrl(year, subject, type);
     showImage(imageUrl, `${year} ${subject} ${type}`);
 }
 
+// Show image in viewer
 function showImage(url, altText) {
+    resetImageTransform();
     displayedImage.src = url;
     displayedImage.alt = altText;
     imageViewer.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
+    
+    // Initialize gestures if not already done
+    if (!hammer) {
+        initImageGestures();
+    }
 }
 
+// Hide image viewer
 function hideImage() { 
     imageViewer.classList.add('hidden');
     document.body.style.overflow = 'auto';
@@ -843,6 +995,11 @@ function setupEventListeners() {
             yearsView.classList.remove('hidden');
             currentView = 'years';
         }
+    });
+    
+    // About button
+    aboutBtn.addEventListener('click', () => {
+        alert('Baccalaureate Portal\n\nAccess exam subjects from 2008 to 2025\n\nDeveloped for educational purposes');
     });
     
     // Keyboard navigation
