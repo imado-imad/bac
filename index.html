@@ -2,37 +2,49 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Interactive PDF Viewer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mathematics Exam 2024</title>
     <style>
-        body {
+        * {
             margin: 0;
             padding: 0;
-            overflow: hidden;
-            touch-action: none;
-            font-family: Arial, sans-serif;
+            box-sizing: border-box;
         }
         
-        #container {
-            position: relative;
+        body {
+            overflow-x: hidden;
+            touch-action: none;
+            font-family: sans-serif;
+        }
+        
+        .container {
             width: 100vw;
-            height: 100vh;
-            overflow: hidden;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
             background-color: #f0f0f0;
         }
         
-        #pdf-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            transform-origin: 0 0;
-            will-change: transform;
+        .image-wrapper {
+            position: relative;
+            width: 100%;
+            overflow: hidden;
+            cursor: grab;
         }
         
-        #pdf-canvas {
+        .image-wrapper.grabbing {
+            cursor: grabbing;
+        }
+        
+        img {
             display: block;
             width: 100%;
             height: auto;
+            transform-origin: 0 0;
+            user-select: none;
+            -webkit-user-drag: none;
         }
         
         .loading {
@@ -40,369 +52,178 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 1.2em;
+            font-size: 1.2rem;
             color: #666;
-        }
-        
-        .controls {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            z-index: 100;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        
-        .control-btn {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: white;
-            border: 1px solid #ccc;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            font-size: 18px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        @media (max-width: 768px) {
-            .controls {
-                bottom: 10px;
-                right: 10px;
-            }
-            
-            .control-btn {
-                width: 36px;
-                height: 36px;
-                font-size: 16px;
-            }
         }
     </style>
 </head>
 <body>
-    <div id="container">
-        <div id="pdf-container">
-            <canvas id="pdf-canvas"></canvas>
-        </div>
-        <div class="loading">Loading PDF...</div>
-        
-        <div class="controls">
-            <button class="control-btn" id="zoom-in">+</button>
-            <button class="control-btn" id="zoom-out">-</button>
-            <button class="control-btn" id="reset">↻</button>
+    <div class="container">
+        <div class="image-wrapper" id="imageWrapper">
+            <div class="loading">Loading image...</div>
+            <img id="zoomImage" src="https://imado-imad.github.io/bac/images/2024-mathematics-exam.jpg" alt="2024 Mathematics Exam">
         </div>
     </div>
 
-    <!-- Libraries -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/panzoom@9.4.3/dist/panzoom.min.js"></script>
-
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
     <script>
-        // Initialize PDF.js
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
-        
-        // Configuration
-        const config = {
-            pdfUrl: 'https://imado-imad.github.io/bac/pdfs/2024-mathematics-exam-c.pdf',
-            scale: 1.0,
-            maxScale: 5.0,
-            minScale: 0.5,
-            zoomStep: 0.5,
-            doubleTapZoom: 2.0
-        };
-        
-        // State
-        let pdfDoc = null;
-        let pageRendering = false;
-        let pageNumPending = null;
-        let currentScale = config.scale;
-        let currentTranslate = { x: 0, y: 0 };
-        let viewport = null;
-        let canvas = document.getElementById('pdf-canvas');
-        let ctx = canvas.getContext('2d');
-        let pdfContainer = document.getElementById('pdf-container');
-        let container = document.getElementById('container');
-        let loadingIndicator = document.querySelector('.loading');
-        
-        // Initialize the viewer
-        function init() {
-            loadingIndicator.style.display = 'block';
+        document.addEventListener('DOMContentLoaded', function() {
+            const imageWrapper = document.getElementById('imageWrapper');
+            const zoomImage = document.getElementById('zoomImage');
+            let scale = 1;
+            let posX = 0;
+            let posY = 0;
+            let lastX = 0;
+            let lastY = 0;
+            let isDragging = false;
+            let loadingElement = document.querySelector('.loading');
             
-            // Load the PDF
-            pdfjsLib.getDocument(config.pdfUrl).promise.then(function(pdfDoc_) {
-                pdfDoc = pdfDoc_;
-                loadingIndicator.style.display = 'none';
-                renderPage(1);
-            }).catch(function(error) {
-                loadingIndicator.textContent = 'Error loading PDF: ' + error.message;
-            });
-        }
-        
-        // Render a PDF page
-        function renderPage(num) {
-            pageRendering = true;
+            // Hide loading when image is loaded
+            zoomImage.onload = function() {
+                loadingElement.style.display = 'none';
+            };
             
-            pdfDoc.getPage(num).then(function(page) {
-                // Set initial scale to fit width
-                viewport = page.getViewport({ scale: 1.0 });
-                const desiredWidth = container.clientWidth;
-                currentScale = desiredWidth / viewport.width;
-                viewport = page.getViewport({ scale: currentScale });
+            // Handle errors
+            zoomImage.onerror = function() {
+                loadingElement.textContent = 'Error loading image';
+            };
+            
+            // Double click zoom
+            imageWrapper.addEventListener('dblclick', function(e) {
+                e.preventDefault();
                 
-                // Set canvas dimensions
-                canvas.height = viewport.height;
-                canvas.width = viewport.width;
+                // Get mouse position relative to image
+                const rect = zoomImage.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
                 
-                // Render PDF page into canvas context
-                const renderContext = {
-                    canvasContext: ctx,
-                    viewport: viewport
-                };
+                // Calculate new scale
+                const newScale = scale === 1 ? 2 : 1;
                 
-                const renderTask = page.render(renderContext);
+                // Calculate new position to zoom to/from center
+                const deltaX = (mouseX / scale) * (1 - newScale);
+                const deltaY = (mouseY / scale) * (1 - newScale);
                 
-                renderTask.promise.then(function() {
-                    pageRendering = false;
-                    if (pageNumPending !== null) {
-                        renderPage(pageNumPending);
-                        pageNumPending = null;
-                    }
-                    
-                    // Initialize pan and zoom after rendering
-                    initPanZoom();
-                });
-            });
-        }
-        
-        // Initialize pan and zoom functionality
-        function initPanZoom() {
-            // Initialize Panzoom
-            const panzoom = Panzoom(pdfContainer, {
-                maxScale: config.maxScale,
-                minScale: config.minScale,
-                step: config.zoomStep,
-                contain: 'outside',
-                startScale: currentScale,
-                startX: currentTranslate.x,
-                startY: currentTranslate.y,
-                disablePan: true, // Initially disable pan until zoomed
-                disableZoom: true, // We'll handle zoom with our own gestures
-                canvas: false
+                // Apply new transform
+                scale = newScale;
+                posX += deltaX;
+                posY += deltaY;
+                
+                applyTransform();
             });
             
-            // Get the parent element to attach hammer.js to
-            const parent = container;
+            // Mouse drag events
+            imageWrapper.addEventListener('mousedown', function(e) {
+                if (scale === 1) return; // Only drag when zoomed
+                
+                e.preventDefault();
+                isDragging = true;
+                lastX = e.clientX;
+                lastY = e.clientY;
+                imageWrapper.classList.add('grabbing');
+            });
             
-            // Initialize Hammer.js for touch gestures
-            const hammer = new Hammer(parent);
+            document.addEventListener('mousemove', function(e) {
+                if (!isDragging) return;
+                
+                const dx = e.clientX - lastX;
+                const dy = e.clientY - lastY;
+                
+                lastX = e.clientX;
+                lastY = e.clientY;
+                
+                // Update position with constraints
+                updatePosition(dx, dy);
+            });
+            
+            document.addEventListener('mouseup', function() {
+                isDragging = false;
+                imageWrapper.classList.remove('grabbing');
+            });
+            
+            // Touch events with Hammer.js
+            const hammer = new Hammer(imageWrapper);
             hammer.get('pinch').set({ enable: true });
             hammer.get('pan').set({ direction: Hammer.DIRECTION_ALL });
             
-            // Track initial values for pinch zoom
-            let initialScale = currentScale;
-            let initialDistance = 0;
-            let initialCenter = { x: 0, y: 0 };
+            let initialScale = 1;
             
-            // Handle pinch gesture
             hammer.on('pinchstart', function(e) {
-                initialScale = currentScale;
-                initialDistance = e.distance;
-                initialCenter = {
-                    x: e.center.x - pdfContainer.getBoundingClientRect().left,
-                    y: e.center.y - pdfContainer.getBoundingClientRect().top
-                };
+                initialScale = scale;
             });
             
             hammer.on('pinch', function(e) {
-                e.preventDefault();
-                const scale = (e.distance / initialDistance) * initialScale;
-                const newScale = Math.min(Math.max(scale, config.minScale), config.maxScale);
-                
-                // Calculate the focal point in PDF container coordinates
-                const focalPoint = {
-                    x: initialCenter.x / currentScale,
-                    y: initialCenter.y / currentScale
-                };
-                
-                // Calculate the new position to keep the focal point stable
-                const dx = (focalPoint.x * newScale) - (focalPoint.x * currentScale);
-                const dy = (focalPoint.y * newScale) - (focalPoint.y * currentScale);
-                
-                currentScale = newScale;
-                currentTranslate.x -= dx;
-                currentTranslate.y -= dy;
-                
+                scale = initialScale * e.scale;
                 applyTransform();
             });
             
-            // Handle pan gesture
-            hammer.on('panstart panmove', function(e) {
-                if (currentScale > config.scale) {
-                    e.preventDefault();
-                    currentTranslate.x += e.deltaX;
-                    currentTranslate.y += e.deltaY;
-                    applyTransform();
-                }
-            });
-            
-            // Handle double tap
-            hammer.on('doubletap', function(e) {
-                e.preventDefault();
-                const rect = pdfContainer.getBoundingClientRect();
-                const clickX = e.center.x - rect.left;
-                const clickY = e.center.y - rect.top;
-                
-                if (currentScale === config.scale) {
-                    // Zoom in at clicked point
-                    const targetScale = currentScale * config.doubleTapZoom;
-                    const focalPoint = {
-                        x: clickX / currentScale,
-                        y: clickY / currentScale
-                    };
-                    
-                    const dx = (focalPoint.x * targetScale) - (focalPoint.x * currentScale);
-                    const dy = (focalPoint.y * targetScale) - (focalPoint.y * currentScale);
-                    
-                    currentScale = targetScale;
-                    currentTranslate.x -= dx;
-                    currentTranslate.y -= dy;
-                } else {
-                    // Reset to fit width
-                    currentScale = config.scale;
-                    currentTranslate.x = 0;
-                    currentTranslate.y = 0;
+            hammer.on('panstart', function(e) {
+                if (scale === 1 && window.innerWidth <= 768) {
+                    // Allow vertical panning when not zoomed on mobile
+                    lastY = e.center.y;
+                    return;
                 }
                 
-                applyTransform();
+                if (scale === 1) return;
+                
+                lastX = e.deltaX;
+                lastY = e.deltaY;
             });
             
-            // Desktop double click
-            pdfContainer.addEventListener('dblclick', function(e) {
-                e.preventDefault();
-                const rect = pdfContainer.getBoundingClientRect();
-                const clickX = e.clientX - rect.left;
-                const clickY = e.clientY - rect.top;
-                
-                if (currentScale === config.scale) {
-                    // Zoom in at clicked point
-                    const targetScale = currentScale * config.doubleTapZoom;
-                    const focalPoint = {
-                        x: clickX / currentScale,
-                        y: clickY / currentScale
-                    };
-                    
-                    const dx = (focalPoint.x * targetScale) - (focalPoint.x * currentScale);
-                    const dy = (focalPoint.y * targetScale) - (focalPoint.y * currentScale);
-                    
-                    currentScale = targetScale;
-                    currentTranslate.x -= dx;
-                    currentTranslate.y -= dy;
-                } else {
-                    // Reset to fit width
-                    currentScale = config.scale;
-                    currentTranslate.x = 0;
-                    currentTranslate.y = 0;
+            hammer.on('pan', function(e) {
+                if (scale === 1 && window.innerWidth <= 768) {
+                    // Vertical panning only when not zoomed on mobile
+                    const dy = e.center.y - lastY;
+                    lastY = e.center.y;
+                    updatePosition(0, dy);
+                    return;
                 }
                 
-                applyTransform();
+                if (scale === 1) return;
+                
+                const dx = e.deltaX - lastX;
+                const dy = e.deltaY - lastY;
+                
+                lastX = e.deltaX;
+                lastY = e.deltaY;
+                
+                updatePosition(dx, dy);
             });
             
-            // Control buttons
-            document.getElementById('zoom-in').addEventListener('click', function() {
-                zoomAtCenter(1 + config.zoomStep);
-            });
-            
-            document.getElementById('zoom-out').addEventListener('click', function() {
-                zoomAtCenter(1 - config.zoomStep);
-            });
-            
-            document.getElementById('reset').addEventListener('click', function() {
-                currentScale = config.scale;
-                currentTranslate.x = 0;
-                currentTranslate.y = 0;
-                applyTransform();
-            });
-            
-            // Apply the current transform to the PDF container
-            function applyTransform() {
-                pdfContainer.style.transform = `translate(${currentTranslate.x}px, ${currentTranslate.y}px) scale(${currentScale})`;
-                
-                // Ensure we stay within bounds
-                constrainPosition();
-            }
-            
-            // Zoom at the center of the viewport
-            function zoomAtCenter(factor) {
-                const containerRect = container.getBoundingClientRect();
-                const centerX = containerRect.width / 2;
-                const centerY = containerRect.height / 2;
-                
-                const pdfRect = pdfContainer.getBoundingClientRect();
-                const clickX = centerX - pdfRect.left;
-                const clickY = centerY - pdfRect.top;
-                
-                const targetScale = currentScale * factor;
-                const newScale = Math.min(Math.max(targetScale, config.minScale), config.maxScale);
-                
-                const focalPoint = {
-                    x: clickX / currentScale,
-                    y: clickY / currentScale
-                };
-                
-                const dx = (focalPoint.x * newScale) - (focalPoint.x * currentScale);
-                const dy = (focalPoint.y * newScale) - (focalPoint.y * currentScale);
-                
-                currentScale = newScale;
-                currentTranslate.x -= dx;
-                currentTranslate.y -= dy;
-                
-                applyTransform();
-            }
-            
-            // Constrain the position to keep the PDF visible
-            function constrainPosition() {
-                const containerRect = container.getBoundingClientRect();
-                const pdfRect = pdfContainer.getBoundingClientRect();
-                
-                const scaledWidth = pdfRect.width * currentScale;
-                const scaledHeight = pdfRect.height * currentScale;
-                
-                // Calculate maximum allowed translation
-                const maxX = (scaledWidth - containerRect.width) / 2;
-                const minX = -maxX;
-                const maxY = (scaledHeight - containerRect.height) / 2;
-                const minY = -maxY;
+            function updatePosition(dx, dy) {
+                // Calculate new position
+                posX += dx / scale;
+                posY += dy / scale;
                 
                 // Apply constraints
-                currentTranslate.x = Math.min(Math.max(currentTranslate.x, minX), maxX);
-                currentTranslate.y = Math.min(Math.max(currentTranslate.y, minY), maxY);
+                const imgRect = zoomImage.getBoundingClientRect();
+                const wrapperRect = imageWrapper.getBoundingClientRect();
                 
-                // If PDF is smaller than container, center it
-                if (scaledWidth < containerRect.width) {
-                    currentTranslate.x = (containerRect.width - scaledWidth) / 2 - pdfRect.left;
-                }
+                const maxX = Math.max(0, (imgRect.width * scale - wrapperRect.width) / scale);
+                const maxY = Math.max(0, (imgRect.height * scale - wrapperRect.height) / scale);
                 
-                if (scaledHeight < containerRect.height) {
-                    currentTranslate.y = (containerRect.height - scaledHeight) / 2 - pdfRect.top;
-                }
+                posX = Math.min(Math.max(posX, -maxX), 0);
+                posY = Math.min(Math.max(posY, -maxY), 0);
                 
                 applyTransform();
             }
             
-            // Handle window resize
+            function applyTransform() {
+                zoomImage.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`;
+            }
+            
+            // Reset on window resize
             window.addEventListener('resize', function() {
-                if (!pageRendering && pdfDoc) {
-                    renderPage(1);
+                if (scale === 1) {
+                    posX = 0;
+                    posY = 0;
+                    applyTransform();
+                } else {
+                    // Recalculate constraints
+                    updatePosition(0, 0);
                 }
             });
-        }
-        
-        // Start the application
-        init();
+        });
     </script>
 </body>
 </html>
