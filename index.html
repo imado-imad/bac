@@ -2,219 +2,55 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mathematics Exam Image Viewer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Responsive Image Viewer</title>
     <style>
-        * {
+        body, html {
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            overflow: hidden;
-            height: 100vh;
-            width: 100vw;
-            touch-action: none;
-        }
-        
-        #image-container {
-            position: relative;
             width: 100%;
             height: 100%;
-            overflow: hidden;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            overflow: hidden; /* Prevent body scrolling */
             background-color: #f0f0f0;
         }
-        
-        #image-wrapper {
-            position: relative;
-            max-width: 100%;
-            max-height: 100%;
-            transition: transform 0.1s ease-out;
+        .pinch-zoom-container {
+            width: 100%;
+            height: 100%;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
         }
-        
-        #image-wrapper img {
-            display: block;
+        img {
             width: 100%;
             height: auto;
-            user-select: none;
-            -webkit-user-drag: none;
+            display: block;
         }
     </style>
 </head>
 <body>
-    <div id="image-container">
-        <div id="image-wrapper">
-            <img src="https://imado-imad.github.io/bac/images/2024-mathematics-exam.jpg" alt="2024 Mathematics Exam">
-        </div>
+
+    <div class="pinch-zoom-container">
+        <img src="https://imado-imad.github.io/bac/images/2024-mathematics-exam.jpg" alt="Mathematics Exam 2024">
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+    <script src="https://unpkg.com/pinch-zoom-js@2.3.5/dist/pinch-zoom.umd.js"></script>
+
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const container = document.getElementById('image-container');
-            const wrapper = document.getElementById('image-wrapper');
-            const img = wrapper.querySelector('img');
-            
-            let scale = 1;
-            let posX = 0;
-            let posY = 0;
-            let lastX = 0;
-            let lastY = 0;
-            let isDragging = false;
-            let initialDistance = null;
-            let initialScale = 1;
-            
-            // Initialize Hammer.js for touch gestures
-            const hammer = new Hammer(container);
-            hammer.get('pinch').set({ enable: true });
-            hammer.get('pan').set({ direction: Hammer.DIRECTION_ALL });
-            
-            // Load image and set initial dimensions
-            img.onload = function() {
-                resetImagePosition();
-            };
-            
-            // Double click to zoom in/out
-            container.addEventListener('dblclick', function(e) {
-                e.preventDefault();
-                
-                const rect = container.getBoundingClientRect();
-                const mouseX = e.clientX - rect.left;
-                const mouseY = e.clientY - rect.top;
-                
-                const newScale = scale === 1 ? 2 : 1;
-                const delta = newScale - scale;
-                
-                // Calculate new position to zoom toward mouse position
-                posX -= (mouseX - posX - rect.width / 2) * (delta / scale);
-                posY -= (mouseY - posY - rect.height / 2) * (delta / scale);
-                
-                scale = newScale;
-                applyTransform();
+        document.addEventListener('DOMContentLoaded', () => {
+            const el = document.querySelector('div.pinch-zoom-container');
+            new PinchZoom.default(el, {
+                // Allow vertical dragging even when not zoomed
+                draggableUnzoomed: true,
+                // Set a max zoom factor
+                maxZoom: 5,
+                // Ensure double-tap zooms in/out
+                tapZoomFactor: 2,
+                // Constrain panning within the element boundaries
+                clamp: "contain"
             });
-            
-            // Mouse down event for dragging
-            container.addEventListener('mousedown', function(e) {
-                if (scale > 1) {
-                    isDragging = true;
-                    lastX = e.clientX;
-                    lastY = e.clientY;
-                    e.preventDefault();
-                }
-            });
-            
-            // Mouse move event for dragging
-            document.addEventListener('mousemove', function(e) {
-                if (isDragging) {
-                    const dx = e.clientX - lastX;
-                    const dy = e.clientY - lastY;
-                    
-                    lastX = e.clientX;
-                    lastY = e.clientY;
-                    
-                    posX += dx;
-                    posY += dy;
-                    
-                    applyTransform();
-                }
-            });
-            
-            // Mouse up event to stop dragging
-            document.addEventListener('mouseup', function() {
-                isDragging = false;
-            });
-            
-            // Mouse leave event to stop dragging
-            container.addEventListener('mouseleave', function() {
-                isDragging = false;
-            });
-            
-            // Touch events for mobile
-            hammer.on('panstart', function(e) {
-                if (scale > 1 || e.pointerType === 'touch') {
-                    lastX = e.center.x;
-                    lastY = e.center.y;
-                }
-            });
-            
-            hammer.on('panmove', function(e) {
-                if (scale > 1 || e.pointerType === 'touch') {
-                    const dx = e.center.x - lastX;
-                    const dy = e.center.y - lastY;
-                    
-                    lastX = e.center.x;
-                    lastY = e.center.y;
-                    
-                    posX += dx;
-                    posY += dy;
-                    
-                    applyTransform();
-                }
-            });
-            
-            // Pinch zoom events
-            hammer.on('pinchstart', function(e) {
-                initialDistance = e.distance;
-                initialScale = scale;
-            });
-            
-            hammer.on('pinchmove', function(e) {
-                if (initialDistance !== null) {
-                    scale = initialScale * (e.distance / initialDistance);
-                    applyTransform();
-                }
-            });
-            
-            hammer.on('pinchend', function() {
-                initialDistance = null;
-                constrainImage();
-            });
-            
-            // Reset image on window resize
-            window.addEventListener('resize', function() {
-                if (scale === 1) {
-                    resetImagePosition();
-                } else {
-                    constrainImage();
-                }
-            });
-            
-            // Apply the current transform to the image
-            function applyTransform() {
-                wrapper.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`;
-            }
-            
-            // Constrain image to container bounds
-            function constrainImage() {
-                if (scale <= 1) {
-                    resetImagePosition();
-                    return;
-                }
-                
-                const containerRect = container.getBoundingClientRect();
-                const wrapperRect = wrapper.getBoundingClientRect();
-                
-                const maxX = (wrapperRect.width * scale - containerRect.width) / 2;
-                const maxY = (wrapperRect.height * scale - containerRect.height) / 2;
-                
-                posX = Math.min(Math.max(posX, -maxX), maxX);
-                posY = Math.min(Math.max(posY, -maxY), maxY);
-                
-                applyTransform();
-            }
-            
-            // Reset image to initial position
-            function resetImagePosition() {
-                scale = 1;
-                posX = 0;
-                posY = 0;
-                applyTransform();
-            }
         });
     </script>
+
 </body>
 </html>
