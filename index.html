@@ -2,306 +2,407 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Image Revealer</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Interactive PDF Viewer</title>
     <style>
-        /* Image Viewer Styles */
-.fade-in {
-    animation: fadeIn 0.5s ease-in-out;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-.pulse {
-    animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-    100% { transform: scale(1); }
-}
-
-.close-btn {
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
-    width: 40px;
-    height: 40px;
-    background-color: #ef4444;
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease;
-    z-index: 1500;
-}
-
-.close-btn:hover {
-    background-color: #dc2626;
-    transform: scale(1.1);
-}
-
-#image-viewer {
-    transition: opacity 0.3s ease;
-    z-index: 1000;
-    overflow: auto;
-    touch-action: none;
-    overscroll-behavior: contain;
-}
-
-#image-viewer:not(.hidden) {
-    display: flex;
-    align-items: flex-start;
-    padding: 0rem;
-}
-
-.image-wrapper {
-    position: relative;
-    display: inline-block;
-    width: 100%;
-    max-width: 100%;
-    overflow: hidden;
-    margin: auto;
-    touch-action: none;
-}
-
-#displayed-image {
-    width: 100%;
-    height: auto;
-    display: block;
-    max-height: none;
-    transform-origin: center center;
-    transition: transform 0.1s ease-out;
-    will-change: transform;
-    user-select: none;
-    -webkit-user-drag: none;
-}
-
-#imageBlock {
-    touch-action: none;
-    position: relative;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-}
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            touch-action: none;
+            font-family: Arial, sans-serif;
+        }
         
-        @media (max-width: 640px) {
-            .close-btn {
-                width: 30px;
-                height: 30px;
-                top: 0.5rem;
-                right: 0.5rem;
+        #container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #f0f0f0;
+        }
+        
+        #pdf-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform-origin: 0 0;
+            will-change: transform;
+        }
+        
+        #pdf-canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.2em;
+            color: #666;
+        }
+        
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .control-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: white;
+            border: 1px solid #ccc;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        @media (max-width: 768px) {
+            .controls {
+                bottom: 10px;
+                right: 10px;
             }
-            #image-viewer {
-             padding: 0rem;
-           }
-          
+            
+            .control-btn {
+                width: 36px;
+                height: 36px;
+                font-size: 16px;
+            }
         }
     </style>
 </head>
 <body>
-        <button 
-            id="revealButton"
-            class="bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600 text-white font-bold py-4 px-8 rounded-full shadow-lg transform transition-all duration-300 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-purple-300 pulse mb-8"
-            onclick="revealImage()"
-        >
-            <span class="text-xl md:text-2xl">Reveal Image</span>
-            <i class="fas fa-image ml-2"></i>
-        </button>
-
-
-        <div id="image-viewer" class="hidden fixed inset-0 bg-black bg-opacity-90 justify-center">
-        <div id="imageContainer" class="text-center w-full max-w-4xl h-full flex items-center justify-center">
-        <div id="imageBlock" class="relative w-full h-full overflow-hidden touch-none">
-            <div class="image-wrapper relative w-full h-full flex items-center justify-center">
-                <img 
-                    id="displayed-image"
-                    src="https://imado-imad.github.io/bac/images/2024-mathematics-exam.jpg" 
-                    alt="2024 Mathematics Exam"
-                    class="max-w-full max-h-full rounded-lg shadow-2xl border-4 border-white touch-none fade-in"
-                    loading="lazy"
-                >
-                <div class="close-btn" onclick="hideImage()">
-                    <i class="fas fa-times text-lg"></i>
-                </div>
-            </div>
-            <div class="absolute bottom-4 left-0 right-0 flex justify-center gap-4">
-                <button 
-                    onclick="hideImage()"
-                    class="bg-gray-800 hover:bg-gray-900 text-white font-medium py-2 px-6 rounded-full shadow-md transition-all duration-300 hover:scale-105"
-                >
-                    <i class="fas fa-times mr-2"></i> Hide Image
-                </button>
-            </div>
+    <div id="container">
+        <div id="pdf-container">
+            <canvas id="pdf-canvas"></canvas>
+        </div>
+        <div class="loading">Loading PDF...</div>
+        
+        <div class="controls">
+            <button class="control-btn" id="zoom-in">+</button>
+            <button class="control-btn" id="zoom-out">-</button>
+            <button class="control-btn" id="reset">↻</button>
         </div>
     </div>
-</div>
 
-<script>
-    // Add these variable declarations at the top
-    let currentScale = 1;
-    let lastScale = 1;
-    let currentX = 0;
-    let currentY = 0;
-    let lastX = 0;
-    let lastY = 0;
-    let hammer;
-    
-    const imageViewer = document.getElementById('image-viewer');
-    const imageBlock = document.getElementById('imageBlock');
-    const button = document.getElementById('revealButton');
-    const image = document.getElementById('displayed-image');
+    <!-- Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/panzoom@9.4.3/dist/panzoom.min.js"></script>
 
-    // Initialize gestures when image viewer is shown
-    function revealImage() {
-        resetImageTransform();
-        imageViewer.classList.remove('hidden');
-        document.body.style.overflow = 'hidden';
+    <script>
+        // Initialize PDF.js
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
         
-        // Initialize gestures when showing the image
-    
-    if (!hammer) {
-        initImageGestures();
-    }
-    }
-    
-    function hideImage() {
-        imageViewer.classList.add('hidden');
-        document.body.style.overflow = 'auto';
-    }
-
-    // The rest of your existing functions can remain the same
-    function initImageGestures() {
-        const image = document.getElementById('displayed-image');
-        const imageBlock = document.getElementById('imageBlock');
+        // Configuration
+        const config = {
+            pdfUrl: 'https://imado-imad.github.io/bac/pdfs/2024-mathematics-exam-c.pdf',
+            scale: 1.0,
+            maxScale: 5.0,
+            minScale: 0.5,
+            zoomStep: 0.5,
+            doubleTapZoom: 2.0
+        };
         
-        // Create Hammer manager
-        hammer = new Hammer.Manager(image, {
-            recognizers: [
-                [Hammer.Pan, { threshold: 0 }],
-                [Hammer.Pinch],
-                [Hammer.Tap, { event: 'doubletap', taps: 2 }]
-            ]
-        });
+        // State
+        let pdfDoc = null;
+        let pageRendering = false;
+        let pageNumPending = null;
+        let currentScale = config.scale;
+        let currentTranslate = { x: 0, y: 0 };
+        let viewport = null;
+        let canvas = document.getElementById('pdf-canvas');
+        let ctx = canvas.getContext('2d');
+        let pdfContainer = document.getElementById('pdf-container');
+        let container = document.getElementById('container');
+        let loadingIndicator = document.querySelector('.loading');
         
-        // Reset transforms when hiding image
-        imageViewer.addEventListener('transitionend', function(e) {
-            if (imageViewer.classList.contains('hidden')) {
-                resetImageTransform();
-            }
-        });
-        
-        // Pan gesture
-        hammer.on('panstart panmove', function(e) {
-            if (currentScale <= 1) return;
+        // Initialize the viewer
+        function init() {
+            loadingIndicator.style.display = 'block';
             
-            const deltaX = e.deltaX - lastX;
-            const deltaY = e.deltaY - lastY;
-            
-            lastX = e.deltaX;
-            lastY = e.deltaY;
-            
-            currentX += deltaX;
-            currentY += deltaY;
-            
-            applyImageTransform();
-        });
-        
-        hammer.on('panend', function() {
-            lastX = 0;
-            lastY = 0;
-            checkBounds();
-        });
-        
-        // Pinch zoom gesture
-        hammer.on('pinchstart', function() {
-            lastScale = currentScale;
-        });
-        
-        hammer.on('pinchmove', function(e) {
-            currentScale = Math.max(1, Math.min(lastScale * e.scale, 5));
-            applyImageTransform();
-        });
-        
-        hammer.on('pinchend', function() {
-            checkBounds();
-        });
-        
-        // Double tap to zoom
-        hammer.on('doubletap', function(e) {
-            if (currentScale > 1) {
-                resetImageTransform();
-            } else {
-                currentScale = 2;
-                applyImageTransform();
-                
-                // Center on tap point
-                const rect = image.getBoundingClientRect();
-                const centerX = e.center.x - rect.left;
-                const centerY = e.center.y - rect.top;
-                
-                currentX = (imageBlock.clientWidth / 2 - centerX) * currentScale;
-                currentY = (imageBlock.clientHeight / 2 - centerY) * currentScale;
-                
-                applyImageTransform();
-                checkBounds();
-            }
-        });
-        
-        // Prevent native touch behaviors
-        image.addEventListener('touchmove', function(e) {
-            if (currentScale > 1) {
-                e.preventDefault();
-            }
-        }, { passive: false });
-    }
-
-    // Apply transform to image
-    function applyImageTransform() {
-        const image = document.getElementById('displayed-image');
-        image.style.transform = `translate(${currentX}px, ${currentY}px) scale(${currentScale})`;
-    }
-
-    // Reset image transform
-    function resetImageTransform() {
-        currentScale = 1;
-        currentX = 0;
-        currentY = 0;
-        applyImageTransform();
-    }
-
-    // Ensure image stays within bounds
-    function checkBounds() {
-        const image = document.getElementById('displayed-image');
-        const imageBlock = document.getElementById('imageBlock');
-        const rect = image.getBoundingClientRect();
-        
-        const maxX = (rect.width - imageBlock.clientWidth) / 2;
-        const maxY = (rect.height - imageBlock.clientHeight) / 2;
-        
-        currentX = Math.min(Math.max(currentX, -maxX), maxX);
-        currentY = Math.min(Math.max(currentY, -maxY), maxY);
-        
-        applyImageTransform();
-    }
-
-    // Make sure image stays responsive on window resize
-    window.addEventListener('resize', function() {
-        if (currentScale > 1) {
-            resetImageTransform();
+            // Load the PDF
+            pdfjsLib.getDocument(config.pdfUrl).promise.then(function(pdfDoc_) {
+                pdfDoc = pdfDoc_;
+                loadingIndicator.style.display = 'none';
+                renderPage(1);
+            }).catch(function(error) {
+                loadingIndicator.textContent = 'Error loading PDF: ' + error.message;
+            });
         }
-    });
-</script>
+        
+        // Render a PDF page
+        function renderPage(num) {
+            pageRendering = true;
+            
+            pdfDoc.getPage(num).then(function(page) {
+                // Set initial scale to fit width
+                viewport = page.getViewport({ scale: 1.0 });
+                const desiredWidth = container.clientWidth;
+                currentScale = desiredWidth / viewport.width;
+                viewport = page.getViewport({ scale: currentScale });
+                
+                // Set canvas dimensions
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+                
+                // Render PDF page into canvas context
+                const renderContext = {
+                    canvasContext: ctx,
+                    viewport: viewport
+                };
+                
+                const renderTask = page.render(renderContext);
+                
+                renderTask.promise.then(function() {
+                    pageRendering = false;
+                    if (pageNumPending !== null) {
+                        renderPage(pageNumPending);
+                        pageNumPending = null;
+                    }
+                    
+                    // Initialize pan and zoom after rendering
+                    initPanZoom();
+                });
+            });
+        }
+        
+        // Initialize pan and zoom functionality
+        function initPanZoom() {
+            // Initialize Panzoom
+            const panzoom = Panzoom(pdfContainer, {
+                maxScale: config.maxScale,
+                minScale: config.minScale,
+                step: config.zoomStep,
+                contain: 'outside',
+                startScale: currentScale,
+                startX: currentTranslate.x,
+                startY: currentTranslate.y,
+                disablePan: true, // Initially disable pan until zoomed
+                disableZoom: true, // We'll handle zoom with our own gestures
+                canvas: false
+            });
+            
+            // Get the parent element to attach hammer.js to
+            const parent = container;
+            
+            // Initialize Hammer.js for touch gestures
+            const hammer = new Hammer(parent);
+            hammer.get('pinch').set({ enable: true });
+            hammer.get('pan').set({ direction: Hammer.DIRECTION_ALL });
+            
+            // Track initial values for pinch zoom
+            let initialScale = currentScale;
+            let initialDistance = 0;
+            let initialCenter = { x: 0, y: 0 };
+            
+            // Handle pinch gesture
+            hammer.on('pinchstart', function(e) {
+                initialScale = currentScale;
+                initialDistance = e.distance;
+                initialCenter = {
+                    x: e.center.x - pdfContainer.getBoundingClientRect().left,
+                    y: e.center.y - pdfContainer.getBoundingClientRect().top
+                };
+            });
+            
+            hammer.on('pinch', function(e) {
+                e.preventDefault();
+                const scale = (e.distance / initialDistance) * initialScale;
+                const newScale = Math.min(Math.max(scale, config.minScale), config.maxScale);
+                
+                // Calculate the focal point in PDF container coordinates
+                const focalPoint = {
+                    x: initialCenter.x / currentScale,
+                    y: initialCenter.y / currentScale
+                };
+                
+                // Calculate the new position to keep the focal point stable
+                const dx = (focalPoint.x * newScale) - (focalPoint.x * currentScale);
+                const dy = (focalPoint.y * newScale) - (focalPoint.y * currentScale);
+                
+                currentScale = newScale;
+                currentTranslate.x -= dx;
+                currentTranslate.y -= dy;
+                
+                applyTransform();
+            });
+            
+            // Handle pan gesture
+            hammer.on('panstart panmove', function(e) {
+                if (currentScale > config.scale) {
+                    e.preventDefault();
+                    currentTranslate.x += e.deltaX;
+                    currentTranslate.y += e.deltaY;
+                    applyTransform();
+                }
+            });
+            
+            // Handle double tap
+            hammer.on('doubletap', function(e) {
+                e.preventDefault();
+                const rect = pdfContainer.getBoundingClientRect();
+                const clickX = e.center.x - rect.left;
+                const clickY = e.center.y - rect.top;
+                
+                if (currentScale === config.scale) {
+                    // Zoom in at clicked point
+                    const targetScale = currentScale * config.doubleTapZoom;
+                    const focalPoint = {
+                        x: clickX / currentScale,
+                        y: clickY / currentScale
+                    };
+                    
+                    const dx = (focalPoint.x * targetScale) - (focalPoint.x * currentScale);
+                    const dy = (focalPoint.y * targetScale) - (focalPoint.y * currentScale);
+                    
+                    currentScale = targetScale;
+                    currentTranslate.x -= dx;
+                    currentTranslate.y -= dy;
+                } else {
+                    // Reset to fit width
+                    currentScale = config.scale;
+                    currentTranslate.x = 0;
+                    currentTranslate.y = 0;
+                }
+                
+                applyTransform();
+            });
+            
+            // Desktop double click
+            pdfContainer.addEventListener('dblclick', function(e) {
+                e.preventDefault();
+                const rect = pdfContainer.getBoundingClientRect();
+                const clickX = e.clientX - rect.left;
+                const clickY = e.clientY - rect.top;
+                
+                if (currentScale === config.scale) {
+                    // Zoom in at clicked point
+                    const targetScale = currentScale * config.doubleTapZoom;
+                    const focalPoint = {
+                        x: clickX / currentScale,
+                        y: clickY / currentScale
+                    };
+                    
+                    const dx = (focalPoint.x * targetScale) - (focalPoint.x * currentScale);
+                    const dy = (focalPoint.y * targetScale) - (focalPoint.y * currentScale);
+                    
+                    currentScale = targetScale;
+                    currentTranslate.x -= dx;
+                    currentTranslate.y -= dy;
+                } else {
+                    // Reset to fit width
+                    currentScale = config.scale;
+                    currentTranslate.x = 0;
+                    currentTranslate.y = 0;
+                }
+                
+                applyTransform();
+            });
+            
+            // Control buttons
+            document.getElementById('zoom-in').addEventListener('click', function() {
+                zoomAtCenter(1 + config.zoomStep);
+            });
+            
+            document.getElementById('zoom-out').addEventListener('click', function() {
+                zoomAtCenter(1 - config.zoomStep);
+            });
+            
+            document.getElementById('reset').addEventListener('click', function() {
+                currentScale = config.scale;
+                currentTranslate.x = 0;
+                currentTranslate.y = 0;
+                applyTransform();
+            });
+            
+            // Apply the current transform to the PDF container
+            function applyTransform() {
+                pdfContainer.style.transform = `translate(${currentTranslate.x}px, ${currentTranslate.y}px) scale(${currentScale})`;
+                
+                // Ensure we stay within bounds
+                constrainPosition();
+            }
+            
+            // Zoom at the center of the viewport
+            function zoomAtCenter(factor) {
+                const containerRect = container.getBoundingClientRect();
+                const centerX = containerRect.width / 2;
+                const centerY = containerRect.height / 2;
+                
+                const pdfRect = pdfContainer.getBoundingClientRect();
+                const clickX = centerX - pdfRect.left;
+                const clickY = centerY - pdfRect.top;
+                
+                const targetScale = currentScale * factor;
+                const newScale = Math.min(Math.max(targetScale, config.minScale), config.maxScale);
+                
+                const focalPoint = {
+                    x: clickX / currentScale,
+                    y: clickY / currentScale
+                };
+                
+                const dx = (focalPoint.x * newScale) - (focalPoint.x * currentScale);
+                const dy = (focalPoint.y * newScale) - (focalPoint.y * currentScale);
+                
+                currentScale = newScale;
+                currentTranslate.x -= dx;
+                currentTranslate.y -= dy;
+                
+                applyTransform();
+            }
+            
+            // Constrain the position to keep the PDF visible
+            function constrainPosition() {
+                const containerRect = container.getBoundingClientRect();
+                const pdfRect = pdfContainer.getBoundingClientRect();
+                
+                const scaledWidth = pdfRect.width * currentScale;
+                const scaledHeight = pdfRect.height * currentScale;
+                
+                // Calculate maximum allowed translation
+                const maxX = (scaledWidth - containerRect.width) / 2;
+                const minX = -maxX;
+                const maxY = (scaledHeight - containerRect.height) / 2;
+                const minY = -maxY;
+                
+                // Apply constraints
+                currentTranslate.x = Math.min(Math.max(currentTranslate.x, minX), maxX);
+                currentTranslate.y = Math.min(Math.max(currentTranslate.y, minY), maxY);
+                
+                // If PDF is smaller than container, center it
+                if (scaledWidth < containerRect.width) {
+                    currentTranslate.x = (containerRect.width - scaledWidth) / 2 - pdfRect.left;
+                }
+                
+                if (scaledHeight < containerRect.height) {
+                    currentTranslate.y = (containerRect.height - scaledHeight) / 2 - pdfRect.top;
+                }
+                
+                applyTransform();
+            }
+            
+            // Handle window resize
+            window.addEventListener('resize', function() {
+                if (!pageRendering && pdfDoc) {
+                    renderPage(1);
+                }
+            });
+        }
+        
+        // Start the application
+        init();
+    </script>
 </body>
 </html>
