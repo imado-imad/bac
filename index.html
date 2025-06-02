@@ -4,53 +4,58 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Responsive Image Viewer</title>
+
     <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden; /* Prevent body scrolling */
-            background-color: #f0f0f0;
-        }
-        #openseadragon-container {
-            width: 100%;
-            height: 100%;
-        }
+    .pinch-zoom-parent {
+        position: fixed;
+        left: 0;
+        top: 0;
+        height: 100%;
+        width: 100%;
+        background: black;
+        z-index: 1000; 
+        overflow-y: auto; /* Enable vertical scrolling */
+    }
+    .pinch-zoom-container {
+        position: relative; 
+        overflow: hidden; 
+        width: 100%;
+    }
+    .pinch-zoom {
+        width: 100%;
+        transform-origin: 0% 0%; 
+        position: absolute;       
+    }
+    img {
+        width: 100%;
+        height: auto;
+        display: block;
+    }
     </style>
 </head>
 <body>
+    <div class="page pinch-zoom-parent">
+        <div class="pinch-zoom-container">
+            <div class="pinch-zoom">
+                <img src="https://imado-imad.github.io/bac/images/2024-mathematics-exam.jpg" id="zoom-image" />
+            </div>
+        </div>
+    </div>
 
-    <div id="openseadragon-container"></div>
-
-    <!-- Load OpenSeadragon from CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/openseadragon@3.1.0/build/openseadragon/openseadragon.min.js"></script>
-
+    <script src="https://unpkg.com/pinch-zoom-js@2.3.5/dist/pinch-zoom.umd.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const viewer = OpenSeadragon({
-                id: "openseadragon-container",
-                prefixUrl: "https://cdn.jsdelivr.net/npm/openseadragon@3.1.0/build/openseadragon/images/",
-                tileSources: {
-                    type: 'image',
-                    url: 'https://imado-imad.github.io/bac/images/2024-mathematics-exam.jpg'
-                },
-                gestureSettingsMouse: {
-                    clickToZoom: true,
-                    dblClickToZoom: true,
-                    pinchToZoom: true,
-                    scrollToZoom: true
-                },
-                maxZoomPixelRatio: 3, // Similar to maxZoom: 3 in PinchZoom
-                minZoomImageRatio: 1, // Similar to minZoom: 1 in PinchZoom
-                visibilityRatio: 1.0, // Similar to clamp: "contain" in PinchZoom
-                immediateRender: true,
-                showNavigationControl: false,
-                showZoomControl: false,
-                showHomeControl: false,
-                showFullPageControl: false
-            });
-        });
+        // Wait for the image to load
+        document.getElementById('zoom-image').onload = function() {
+            var img = this;
+            var container = document.querySelector('.pinch-zoom-container');
+            
+            // Set container height to match image height
+            container.style.height = img.offsetHeight + 'px';
+            
+            // Initialize pinch zoom
+            var el = document.querySelector('.pinch-zoom');
+            new PinchZoom.default(el, {});
+        };
     </script>
 
 </body>
