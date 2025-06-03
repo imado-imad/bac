@@ -56,6 +56,8 @@
             var el = document.querySelector('.pinch-zoom');
             new PinchZoom.default(el, {
                 draggableUnzoomed:false,
+                tapZoomFactor: 2.5,
+                minZoom: 1,
             });
         };
     </script>
