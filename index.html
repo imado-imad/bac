@@ -54,7 +54,9 @@
             
             // Initialize pinch zoom
             var el = document.querySelector('.pinch-zoom');
-            new PinchZoom.default(el, {});
+            new PinchZoom.default(el, {
+                draggableUnzoomed:false,
+            });
         };
     </script>
 
