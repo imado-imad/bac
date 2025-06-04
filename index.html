@@ -14,52 +14,31 @@
         width: 100%;
         background: black;
         z-index: 1000; 
-        overflow-y: auto; /* Enable vertical scrolling */
-    }
-    .pinch-zoom-container {
-        position: relative; 
-        overflow: hidden; 
-        width: 100%;
-    }
-    .pinch-zoom {
-        width: 100%;
-        transform-origin: 0% 0%; 
-        position: absolute;       
+        overflow-y: auto; 
     }
     img {
         width: 100%;
         height: auto;
-        display: block;
     }
     </style>
 </head>
 <body>
     <div class="page pinch-zoom-parent">
-        <div class="pinch-zoom-container">
+        <div class="pinch-zoom-container-height">
             <div class="pinch-zoom">
                 <img src="https://imado-imad.github.io/bac/images/2024-mathematics-exam.jpg" id="zoom-image" />
             </div>
         </div>
     </div>
-
-    <script src="https://unpkg.com/pinch-zoom-js@2.3.5/dist/pinch-zoom.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
     <script>
-        // Wait for the image to load
-        document.getElementById('zoom-image').onload = function() {
-            var img = this;
-            var container = document.querySelector('.pinch-zoom-container');
-            
-            // Set container height to match image height
-            container.style.height = img.offsetHeight + 'px';
-            
-            // Initialize pinch zoom
-            var el = document.querySelector('.pinch-zoom');
-            new PinchZoom.default(el, {
-                draggableUnzoomed:false,
-                tapZoomFactor: 2.5,
-                minZoom: 1,
-            });
-        };
+        const elem = document.getElementById('zoom-image');
+        const panzoom = Panzoom(elem, {
+            minScale: 1,
+            maxScale: 3,
+            step: 1.5,
+            contain: 'outside'
+        });
     </script>
 
 </body>
