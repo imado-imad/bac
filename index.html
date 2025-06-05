@@ -15,10 +15,19 @@
         background: black;
         z-index: 1000; 
         overflow-y: auto; 
+        touch-action: none;
+    }
+    .pinch-zoom {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
     }
     img {
-        width: 100%;
-        height: auto;
+        max-width: 100%;
+        max-height: 100%;
+        transform-origin: 0 0;
     }
     </style>
 </head>
@@ -30,16 +39,126 @@
             </div>
         </div>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
-    <script>
-        const elem = document.getElementById('zoom-image');
-        const panzoom = Panzoom(elem, {
-            minScale: 1,
-            maxScale: 3,
-            step: 1.5,
-            contain: 'outside'
+    <script src="https://cdn.jsdelivr.net/npm/interactjs@1.10.11/dist/interact.min.js"></script>
+    <script>    
+        const img = document.querySelector('#zoom-image');
+        const container = document.querySelector('.pinch-zoom-container-height');
+        const zoomElement = document.querySelector('.pinch-zoom');
+        
+        // Set initial container height
+        container.style.height = img.offsetHeight + 'px';
+        
+        // Variables to track zoom and position
+        let scale = 1;
+        let posX = 0;
+        let posY = 0;
+        const minZoom = 1;
+        const maxZoom = 3;
+        const tapZoomFactor = 2.5;
+        
+        // Update image transform
+        function updateTransform() {
+            img.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`;
+        }
+        
+        // Handle double tap
+        function handleDoubleTap(event) {
+            if (scale === minZoom) {
+                scale = tapZoomFactor;
+                // Center the zoom on the tap position
+                const rect = img.getBoundingClientRect();
+                const offsetX = event.clientX - rect.left;
+                const offsetY = event.clientY - rect.top;
+                
+                posX = -(offsetX * tapZoomFactor - event.clientX);
+                posY = -(offsetY * tapZoomFactor - event.clientY);
+            } else {
+                scale = minZoom;
+                posX = 0;
+                posY = 0;
+            }
+            updateTransform();
+        }
+        
+        // Set up interact.js
+        interact('.pinch-zoom')
+            .draggable({
+                inertia: false,
+                modifiers: [
+                    interact.modifiers.restrictRect({
+                        restriction: 'parent',
+                        endOnly: true
+                    })
+                ],
+                listeners: {
+                    move: function (event) {
+                        if (scale > minZoom) {
+                            posX += event.dx;
+                            posY += event.dy;
+                            updateTransform();
+                        }
+                    }
+                }
+            })
+            .gesturable({
+                listeners: {
+                    start: function (event) {
+                        // Store initial position when gesture starts
+                        const rect = img.getBoundingClientRect();
+                        const center = {
+                            x: rect.left + rect.width / 2,
+                            y: rect.top + rect.height / 2
+                        };
+                        
+                        // Calculate offset from center
+                        event.startCenterOffset = {
+                            x: (center.x - event.clientX) / scale,
+                            y: (center.y - event.clientY) / scale
+                        };
+                    },
+                    move: function (event) {
+                        // Calculate new scale with min/max constraints
+                        const newScale = Math.min(Math.max(scale * event.scale, minZoom), maxZoom);
+                        
+                        if (newScale !== scale) {
+                            // Calculate how much we need to adjust position to zoom toward center
+                            const rect = img.getBoundingClientRect();
+                            const center = {
+                                x: rect.left + rect.width / 2,
+                                y: rect.top + rect.height / 2
+                            };
+                            
+                            // Adjust position to zoom toward the gesture center
+                            const scaleChange = newScale / scale;
+                            posX = event.clientX - (event.clientX - posX) * scaleChange;
+                            posY = event.clientY - (event.clientY - posY) * scaleChange;
+                            
+                            scale = newScale;
+                            updateTransform();
+                        }
+                    }
+                }
+            });
+        
+        // Handle double tap
+        let lastTap = 0;
+        img.addEventListener('touchend', function(event) {
+            const currentTime = new Date().getTime();
+            const tapLength = currentTime - lastTap;
+            if (tapLength < 300 && tapLength > 0) {
+                handleDoubleTap(event.changedTouches[0]);
+            }
+            lastTap = currentTime;
+        });
+        
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            if (scale === minZoom) {
+                posX = 0;
+                posY = 0;
+                updateTransform();
+            }
         });
     </script>
-
 </body>
 </html>
