@@ -71,12 +71,6 @@
         return Array.from(tmp.body.children)[0];
     };
 
-    var triggerEvent = function triggerEvent(el, name) {
-        var event = document.createEvent('HTMLEvents');
-        event.initEvent(name, true, false);
-        el.dispatchEvent(event);
-    };
-
     var definePinchZoom = function definePinchZoom() {
 
         /**
@@ -109,7 +103,7 @@
                 this.setupOffsets();
             }
 
-            this.enable();
+            this.enabled = true;
         },
             sum = function sum(a, b) {
             return a + b;
@@ -130,22 +124,8 @@
                 lockDragAxis: false,
                 setOffsetsOnce: false,
                 use2d: true,
-                zoomStartEventName: 'pz_zoomstart',
-                zoomUpdateEventName: 'pz_zoomupdate',
-                zoomEndEventName: 'pz_zoomend',
-                dragStartEventName: 'pz_dragstart',
-                dragUpdateEventName: 'pz_dragupdate',
-                dragEndEventName: 'pz_dragend',
-                doubleTapEventName: 'pz_doubletap',
                 verticalPadding: 0,
-                horizontalPadding: 0,
-                onZoomStart: null,
-                onZoomEnd: null,
-                onZoomUpdate: null,
-                onDragStart: null,
-                onDragEnd: null,
-                onDragUpdate: null,
-                onDoubleTap: null
+                horizontalPadding: 0
             },
 
             /**
@@ -153,10 +133,6 @@
              * @param event
              */
             handleDragStart: function handleDragStart(event) {
-                triggerEvent(this.el, this.options.dragStartEventName);
-                if (typeof this.options.onDragStart == "function") {
-                    this.options.onDragStart(this, event);
-                }
                 this.stopAnimation();
                 this.lastDragPosition = false;
                 this.hasInteraction = true;
@@ -175,10 +151,6 @@
             },
 
             handleDragEnd: function handleDragEnd() {
-                triggerEvent(this.el, this.options.dragEndEventName);
-                if (typeof this.options.onDragEnd == "function") {
-                    this.options.onDragEnd(this, event);
-                }
                 this.end();
             },
 
@@ -187,10 +159,6 @@
              * @param event
              */
             handleZoomStart: function handleZoomStart(event) {
-                triggerEvent(this.el, this.options.zoomStartEventName);
-                if (typeof this.options.onZoomStart == "function") {
-                    this.options.onZoomStart(this, event);
-                }
                 this.stopAnimation();
                 this.lastScale = 1;
                 this.nthZoom = 0;
@@ -219,10 +187,6 @@
             },
 
             handleZoomEnd: function handleZoomEnd() {
-                triggerEvent(this.el, this.options.zoomEndEventName);
-                if (typeof this.options.onZoomEnd == "function") {
-                    this.options.onZoomEnd(this, event);
-                }
                 this.end();
             },
 
@@ -249,10 +213,6 @@
                 }
 
                 this.animate(this.options.animationDuration, updateProgress, this.swing);
-                triggerEvent(this.el, this.options.doubleTapEventName);
-                if (typeof this.options.onDoubleTap == "function") {
-                    this.options.onDoubleTap(this, event);
-                }
             },
 
             /**
@@ -338,10 +298,6 @@
                     x: (_scale - 1) * (center.x + this.offset.x),
                     y: (_scale - 1) * (center.y + this.offset.y)
                 });
-                triggerEvent(this.el, this.options.zoomUpdateEventName);
-                if (typeof this.options.onZoomUpdate == "function") {
-                    this.options.onZoomUpdate(this, event);
-                }
             },
 
             /**
@@ -393,10 +349,6 @@
                             y: -(center.y - lastCenter.y),
                             x: -(center.x - lastCenter.x)
                         });
-                    }
-                    triggerEvent(this.el, this.options.dragUpdateEventName);
-                    if (typeof this.options.onDragUpdate == "function") {
-                        this.options.onDragUpdate(this, event);
                     }
                 }
             },
@@ -511,14 +463,6 @@
                 var yZoomFactor = this.container.offsetHeight / this.el.offsetHeight;
 
                 return Math.min(xZoomFactor, yZoomFactor);
-            },
-
-            /**
-             * Calculates the aspect ratio of the element
-             * @return the aspect ratio
-             */
-            getAspectRatio: function getAspectRatio() {
-                return this.el.offsetWidth / this.el.offsetHeight;
             },
 
             /**
@@ -739,34 +683,7 @@
                         this.is3d = false;
                     }
                 }.bind(this), 0);
-            },
-
-            /**
-             * Enables event handling for gestures
-             */
-            enable: function enable() {
-                this.enabled = true;
-            },
-
-            /**
-             * Disables event handling for gestures
-             */
-            disable: function disable() {
-                this.enabled = false;
-            },
-
-            /**
-             * Unmounts the zooming container and global event listeners
-             */
-            destroy: function destroy() {
-                window.removeEventListener('resize', this.resizeHandler);
-
-                if (this.container) {
-                    this.container.remove();
-                    this.container = null;
-                }
             }
-
         };
 
         var detectGestures = function detectGestures(el, target) {
