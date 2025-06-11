@@ -17,21 +17,16 @@
         value: true
     });
     /*
-        ImadZoom.js
-        Copyright (c) Manuel Stofer 2025 - today
-    
-        Author: Manuel Stofer (@gmail.com)
-        Version: 1.1.5
+        ImadZoom.js - Modified version without container
+        Based on original work by Manuel Stofer
+        Version: 1.1.5-mod
     */
 
     // polyfills
     if (typeof Object.assign != 'function') {
-        // Must be writable: true, enumerable: false, configurable: true
         Object.defineProperty(Object, "assign", {
             value: function assign(target, varArgs) {
-                // .length of function is 2
                 if (target == null) {
-                    // TypeError if undefined or null
                     throw new TypeError('Cannot convert undefined or null to object');
                 }
 
@@ -41,9 +36,7 @@
                     var nextSource = arguments[index];
 
                     if (nextSource != null) {
-                        // Skip over if undefined or null
                         for (var nextKey in nextSource) {
-                            // Avoid bugs when hasOwnProperty is shadowed
                             if (Object.prototype.hasOwnProperty.call(nextSource, nextKey)) {
                                 to[nextKey] = nextSource[nextKey];
                             }
@@ -63,22 +56,8 @@
         };
     }
 
-    // utils
-    var buildElement = function buildElement(str) {
-        // empty string as title argument required by IE and Edge
-        var tmp = document.implementation.createHTMLDocument('');
-        tmp.body.innerHTML = str;
-        return Array.from(tmp.body.children)[0];
-    };
-
     var definePinchZoom = function definePinchZoom() {
 
-        /**
-         * Pinch zoom
-         * @param el
-         * @param options
-         * @constructor
-         */
         var PinchZoom = function PinchZoom(el, options) {
             this.el = el;
             this.zoomFactor = 1;
@@ -92,14 +71,11 @@
                 y: 0
             };
             this.options = Object.assign({}, this.defaults, options);
-            this.setupMarkup();
+            this.prepareElement();
             this.bindEvents();
             this.update();
 
-            // The image may already be loaded when PinchZoom is initialized,
-            // and then the load event (which trigger update) will never fire.
             if (this.isImageLoaded(this.el)) {
-                this.updateAspectRatio();
                 this.setupOffsets();
             }
 
@@ -128,10 +104,13 @@
                 horizontalPadding: 0
             },
 
-            /**
-             * Event handler for 'dragstart'
-             * @param event
-             */
+            prepareElement: function prepareElement() {
+                // Set necessary styles directly on the element
+                this.el.style.transformOrigin = '0% 0%';
+                this.el.style.position = 'relative'; // Changed from absolute to relative
+                this.el.style.display = 'inline-block'; // Helps with positioning
+            },
+
             handleDragStart: function handleDragStart(event) {
                 this.stopAnimation();
                 this.lastDragPosition = false;
@@ -139,10 +118,6 @@
                 this.handleDrag(event);
             },
 
-            /**
-             * Event handler for 'drag'
-             * @param event
-             */
             handleDrag: function handleDrag(event) {
                 var touch = this.getTouches(event)[0];
                 this.drag(touch, this.lastDragPosition);
@@ -154,10 +129,6 @@
                 this.end();
             },
 
-            /**
-             * Event handler for 'zoomstart'
-             * @param event
-             */
             handleZoomStart: function handleZoomStart(event) {
                 this.stopAnimation();
                 this.lastScale = 1;
@@ -166,20 +137,13 @@
                 this.hasInteraction = true;
             },
 
-            /**
-             * Event handler for 'zoom'
-             * @param event
-             */
             handleZoom: function handleZoom(event, newScale) {
-                // a relative scale factor is used
                 var touchCenter = this.getTouchCenter(this.getTouches(event)),
                     scale = newScale / this.lastScale;
                 this.lastScale = newScale;
 
-                // the first touch events are thrown away since they are not precise
                 this.nthZoom += 1;
                 if (this.nthZoom > 3) {
-
                     this.scale(scale, touchCenter);
                     this.drag(touchCenter, this.lastZoomCenter);
                 }
@@ -190,10 +154,6 @@
                 this.end();
             },
 
-            /**
-             * Event handler for 'doubletap'
-             * @param event
-             */
             handleDoubleTap: function handleDoubleTap(event) {
                 var center = this.getTouches(event)[0],
                     zoomFactor = this.zoomFactor > 1 ? 1 : this.options.tapZoomFactor,
@@ -215,29 +175,19 @@
                 this.animate(this.options.animationDuration, updateProgress, this.swing);
             },
 
-            /**
-             * Compute the initial offset
-             *
-             * the element should be centered in the container upon initialization
-             */
             computeInitialOffset: function computeInitialOffset() {
+                // Calculate offset based on element's natural position
                 this.initialOffset = {
-                    x: -Math.abs(this.el.offsetWidth * this.getInitialZoomFactor() - this.container.offsetWidth) / 2,
-                    y: -Math.abs(this.el.offsetHeight * this.getInitialZoomFactor() - this.container.offsetHeight) / 2
+                    x: 0,
+                    y: 0
                 };
             },
 
-            /**
-             * Reset current image offset to that of the initial offset
-             */
             resetOffset: function resetOffset() {
                 this.offset.x = this.initialOffset.x;
                 this.offset.y = this.initialOffset.y;
             },
 
-            /**
-             * Determine if image is loaded
-             */
             isImageLoaded: function isImageLoaded(el) {
                 if (el.nodeName === 'IMG') {
                     return el.complete && el.naturalHeight !== 0;
@@ -252,25 +202,22 @@
                 }
 
                 this._isOffsetsSet = true;
-
                 this.computeInitialOffset();
                 this.resetOffset();
             },
 
-            /**
-             * Max / min values for the offset
-             * @param offset
-             * @return {Object} the sanitized offset
-             */
             sanitizeOffset: function sanitizeOffset(offset) {
-                var elWidth = this.el.offsetWidth * this.getInitialZoomFactor() * this.zoomFactor;
-                var elHeight = this.el.offsetHeight * this.getInitialZoomFactor() * this.zoomFactor;
-                var maxX = elWidth - this.getContainerX() + this.options.horizontalPadding,
-                    maxY = elHeight - this.getContainerY() + this.options.verticalPadding,
-                    maxOffsetX = Math.max(maxX, 0),
-                    maxOffsetY = Math.max(maxY, 0),
-                    minOffsetX = Math.min(maxX, 0) - this.options.horizontalPadding,
-                    minOffsetY = Math.min(maxY, 0) - this.options.verticalPadding;
+                var elWidth = this.el.offsetWidth * this.zoomFactor;
+                var elHeight = this.el.offsetHeight * this.zoomFactor;
+                var containerWidth = this.el.parentElement.offsetWidth;
+                var containerHeight = this.el.parentElement.offsetHeight;
+                
+                var maxX = elWidth - containerWidth + this.options.horizontalPadding;
+                var maxY = elHeight - containerHeight + this.options.verticalPadding;
+                var maxOffsetX = Math.max(maxX, 0);
+                var maxOffsetY = Math.max(maxY, 0);
+                var minOffsetX = Math.min(maxX, 0) - this.options.horizontalPadding;
+                var minOffsetY = Math.min(maxY, 0) - this.options.verticalPadding;
 
                 return {
                     x: Math.min(Math.max(offset.x, minOffsetX), maxOffsetX),
@@ -278,20 +225,10 @@
                 };
             },
 
-            /**
-             * Scale to a specific zoom factor (not relative)
-             * @param zoomFactor
-             * @param center
-             */
             scaleTo: function scaleTo(zoomFactor, center) {
                 this.scale(zoomFactor / this.zoomFactor, center);
             },
 
-            /**
-             * Scales the element from specified center
-             * @param scale
-             * @param center
-             */
             scale: function scale(_scale, center) {
                 _scale = this.scaleZoomFactor(_scale);
                 this.addOffset({
@@ -300,11 +237,6 @@
                 });
             },
 
-            /**
-             * Scales the zoom factor relative to current state
-             * @param scale
-             * @return the actual scale (can differ because of max min zoom factor)
-             */
             scaleZoomFactor: function scaleZoomFactor(scale) {
                 var originalZoomFactor = this.zoomFactor;
                 this.zoomFactor *= scale;
@@ -312,27 +244,13 @@
                 return this.zoomFactor / originalZoomFactor;
             },
 
-            /**
-             * Determine if the image is in a draggable state
-             *
-             * When the image can be dragged, the drag event is acted upon and cancelled.
-             * When not draggable, the drag event bubbles through this component.
-             *
-             * @return {Boolean}
-             */
             canDrag: function canDrag() {
                 return this.options.draggableUnzoomed || !isCloseTo(this.zoomFactor, 1);
             },
 
-            /**
-             * Drags the element
-             * @param center
-             * @param lastCenter
-             */
             drag: function drag(center, lastCenter) {
                 if (lastCenter) {
                     if (this.options.lockDragAxis) {
-                        // lock scroll to position that was changed the most
                         if (Math.abs(center.x - lastCenter.x) > Math.abs(center.y - lastCenter.y)) {
                             this.addOffset({
                                 x: -(center.x - lastCenter.x),
@@ -353,18 +271,10 @@
                 }
             },
 
-            /**
-             * Calculates the touch center of multiple touches
-             * @param touches
-             * @return {Object}
-             */
             getTouchCenter: function getTouchCenter(touches) {
                 return this.getVectorAvg(touches);
             },
 
-            /**
-             * Calculates the average of multiple vectors (x, y values)
-             */
             getVectorAvg: function getVectorAvg(vectors) {
                 return {
                     x: vectors.map(function (v) {
@@ -376,11 +286,6 @@
                 };
             },
 
-            /**
-             * Adds an offset
-             * @param offset the offset to add
-             * @return return true when the offset change was accepted
-             */
             addOffset: function addOffset(offset) {
                 this.offset = {
                     x: this.offset.x + offset.x,
@@ -396,19 +301,11 @@
                 }
             },
 
-            /**
-             * Checks if the offset is ok with the current zoom factor
-             * @param offset
-             * @return {Boolean}
-             */
             isInsaneOffset: function isInsaneOffset(offset) {
                 var sanitizedOffset = this.sanitizeOffset(offset);
                 return sanitizedOffset.x !== offset.x || sanitizedOffset.y !== offset.y;
             },
 
-            /**
-             * Creates an animation moving to a sane offset
-             */
             sanitizeOffsetAnimation: function sanitizeOffsetAnimation() {
                 var targetOffset = this.sanitizeOffset(this.offset),
                     startOffset = {
@@ -424,10 +321,6 @@
                 this.animate(this.options.animationDuration, updateProgress, this.swing);
             },
 
-            /**
-             * Zooms back to the original position,
-             * (no offset and zoom factor 1)
-             */
             zoomOutAnimation: function zoomOutAnimation() {
                 if (this.zoomFactor === 1) {
                     return;
@@ -443,33 +336,6 @@
                 this.animate(this.options.animationDuration, updateProgress, this.swing);
             },
 
-            /**
-             * Updates the container aspect ratio
-             *
-             * Any previous container height must be cleared before re-measuring the
-             * parent height, since it depends implicitly on the height of any of its children
-             */
-            updateAspectRatio: function updateAspectRatio() {
-                this.unsetContainerY();
-                this.setContainerY(this.container.parentElement.offsetHeight);
-            },
-
-            /**
-             * Calculates the initial zoom factor (for the element to fit into the container)
-             * @return {number} the initial zoom factor
-             */
-            getInitialZoomFactor: function getInitialZoomFactor() {
-                var xZoomFactor = this.container.offsetWidth / this.el.offsetWidth;
-                var yZoomFactor = this.container.offsetHeight / this.el.offsetHeight;
-
-                return Math.min(xZoomFactor, yZoomFactor);
-            },
-
-            /**
-             * Calculates the virtual zoom center for the current offset and zoom factor
-             * (used for reverse zoom)
-             * @return {Object} the current zoom center
-             */
             getCurrentZoomCenter: function getCurrentZoomCenter() {
                 var offsetLeft = this.offset.x - this.initialOffset.x;
                 var centerX = -1 * this.offset.x - offsetLeft / (1 / this.zoomFactor - 1);
@@ -483,13 +349,8 @@
                 };
             },
 
-            /**
-             * Returns the touches of an event relative to the container offset
-             * @param event
-             * @return array touches
-             */
             getTouches: function getTouches(event) {
-                var rect = this.container.getBoundingClientRect();
+                var rect = this.el.getBoundingClientRect();
                 var scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
                 var scrollLeft = document.documentElement.scrollLeft || document.body.scrollLeft;
                 var posTop = rect.top + scrollTop;
@@ -503,14 +364,6 @@
                 });
             },
 
-            /**
-             * Animation loop
-             * does not support simultaneous animations
-             * @param duration
-             * @param framefn
-             * @param timefn
-             * @param callback
-             */
             animate: function animate(duration, framefn, timefn, callback) {
                 var startTime = new Date().getTime(),
                     renderFrame = function () {
@@ -540,56 +393,12 @@
                 requestAnimationFrame(renderFrame);
             },
 
-            /**
-             * Stops the animation
-             */
             stopAnimation: function stopAnimation() {
                 this.inAnimation = false;
             },
 
-            /**
-             * Swing timing function for animations
-             * @param p
-             * @return {Number}
-             */
             swing: function swing(p) {
                 return -Math.cos(p * Math.PI) / 2 + 0.5;
-            },
-
-            getContainerX: function getContainerX() {
-                return this.container.offsetWidth;
-            },
-
-            getContainerY: function getContainerY() {
-                return this.container.offsetHeight;
-            },
-
-            setContainerY: function setContainerY(y) {
-                return this.container.style.height = y + 'px';
-            },
-
-            unsetContainerY: function unsetContainerY() {
-                this.container.style.height = null;
-            },
-
-            /**
-             * Creates the expected html structure
-             */
-            setupMarkup: function setupMarkup() {
-                this.container = buildElement('<div class="pinch-zoom-container"></div>');
-                this.el.parentNode.insertBefore(this.container, this.el);
-                this.container.appendChild(this.el);
-
-                this.container.style.overflow = 'hidden';
-                this.container.style.position = 'relative';
-
-                this.el.style.webkitTransformOrigin = '0% 0%';
-                this.el.style.mozTransformOrigin = '0% 0%';
-                this.el.style.msTransformOrigin = '0% 0%';
-                this.el.style.oTransformOrigin = '0% 0%';
-                this.el.style.transformOrigin = '0% 0%';
-
-                this.el.style.position = 'absolute';
             },
 
             end: function end() {
@@ -598,38 +407,23 @@
                 this.update();
             },
 
-            /**
-             * Binds all required event listeners
-             */
             bindEvents: function bindEvents() {
                 var self = this;
-                detectGestures(this.container, this);
+                detectGestures(this.el, this);
 
                 this.resizeHandler = this.update.bind(this);
                 window.addEventListener('resize', this.resizeHandler);
-                Array.from(this.el.querySelectorAll('img')).forEach(function (imgEl) {
-                    imgEl.addEventListener('load', self.update.bind(self));
-                });
-
+                
                 if (this.el.nodeName === 'IMG') {
                     this.el.addEventListener('load', this.update.bind(this));
+                } else {
+                    Array.from(this.el.querySelectorAll('img')).forEach(function (imgEl) {
+                        imgEl.addEventListener('load', self.update.bind(self));
+                    });
                 }
             },
 
-            /**
-             * Updates the css values according to the current zoom factor and offset
-             */
             update: function update(event) {
-                if (event && event.type === 'resize') {
-                    this.updateAspectRatio();
-                    this.setupOffsets();
-                }
-
-                if (event && event.type === 'load') {
-                    this.updateAspectRatio();
-                    this.setupOffsets();
-                }
-
                 if (this.updatePlanned) {
                     return;
                 }
@@ -638,7 +432,7 @@
                 window.setTimeout(function () {
                     this.updatePlanned = false;
 
-                    var zoomFactor = this.getInitialZoomFactor() * this.zoomFactor,
+                    var zoomFactor = this.zoomFactor,
                         offsetX = -this.offset.x / zoomFactor,
                         offsetY = -this.offset.y / zoomFactor,
                         transform3d = 'scale3d(' + zoomFactor + ', ' + zoomFactor + ',1) ' + 'translate3d(' + offsetX + 'px,' + offsetY + 'px,0px)',
@@ -650,36 +444,22 @@
                         }
                     }.bind(this);
 
-                    // Scale 3d and translate3d are faster (at least on ios)
-                    // but they also reduce the quality.
-                    // PinchZoom uses the 3d transformations during interactions
-                    // after interactions it falls back to 2d transformations
                     if (!this.options.use2d || this.hasInteraction || this.inAnimation) {
                         this.is3d = true;
                         removeClone();
 
-                        this.el.style.webkitTransform = transform3d;
-                        this.el.style.mozTransform = transform2d;
-                        this.el.style.msTransform = transform2d;
-                        this.el.style.oTransform = transform2d;
                         this.el.style.transform = transform3d;
+                        this.el.style.webkitTransform = transform3d;
                     } else {
-                        // When changing from 3d to 2d transform webkit has some glitches.
-                        // To avoid this, a copy of the 3d transformed element is displayed in the
-                        // foreground while the element is converted from 3d to 2d transform
                         if (this.is3d) {
                             this.clone = this.el.cloneNode(true);
                             this.clone.style.pointerEvents = 'none';
-                            this.container.appendChild(this.clone);
+                            this.el.parentNode.appendChild(this.clone);
                             window.setTimeout(removeClone, 200);
                         }
 
-                        this.el.style.webkitTransform = transform2d;
-                        this.el.style.mozTransform = transform2d;
-                        this.el.style.msTransform = transform2d;
-                        this.el.style.oTransform = transform2d;
                         this.el.style.transform = transform2d;
-
+                        this.el.style.webkitTransform = transform2d;
                         this.is3d = false;
                     }
                 }.bind(this), 0);
@@ -693,7 +473,6 @@
                 startTouches = null,
                 setInteraction = function setInteraction(newInteraction, event) {
                 if (interaction !== newInteraction) {
-
                     if (interaction && !newInteraction) {
                         switch (interaction) {
                             case "zoom":
@@ -826,6 +605,5 @@
     };
 
     var PinchZoom = definePinchZoom();
-
     exports.default = PinchZoom;
 });
