@@ -14,11 +14,24 @@
         width: 100%;
         background: black;
         z-index: 1000; 
-        overflow-y: auto; 
+        overflow: auto;
+    }
+    .pinch-zoom-container-height {
+        position: relative;
+        width: 100%;
     }
     img {
-        width: 100%;
+        display: block;
+        max-width: 100%;
         height: auto;
+    }
+    .pinch-zoom-container {
+        overflow: visible !important;
+        position: relative !important;
+    }
+    .pinch-zoom {
+        position: relative !important;
+        display: inline-block;
     }
     </style>
 </head>
@@ -32,19 +45,27 @@
     </div>
     <script src="https://imado-imad.github.io/bac/images/pinch-zoom.umd.js"></script>
     <script>    
+        document.addEventListener('DOMContentLoaded', function() {
             const img = document.querySelector('#zoom-image');
-            const container = document.querySelector('.pinch-zoom-container-height');
-            container.style.height = img.offsetHeight + 'px';
-            var el = document.querySelector('.pinch-zoom');
-            new PinchZoom.default(el, {
-                draggableUnzoomed: false,
-                maxZoom: 3,
-                minZoom: 1,
-                tapZoomFactor: 2.5,
-                lockDragAxis: true,
-                clamp: "contain"
-            });      
-    </script>
+            const el = document.querySelector('.pinch-zoom');
+            
+            function initPinchZoom() {
+                    new PinchZoom.default(el, {
+                    draggableUnzoomed: false,
+                    maxZoom: 3,
+                    minZoom: 1,
+                    tapZoomFactor: 2.5,
+                    clamp: "contain",
+                });
+                
+             }
 
+            if (img.complete) {
+                initPinchZoom();
+            } else {
+                img.addEventListener('load', initPinchZoom);
+            }
+        });
+    </script>
 </body>
 </html>
