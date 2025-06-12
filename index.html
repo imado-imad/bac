@@ -2,327 +2,255 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Responsive PDF Viewer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Responsive PDF Viewer with Zoom & Pan</title>
 <style>
-  /* Reset and base styles */
   html, body {
     margin: 0; padding: 0; height: 100%;
-    overflow: hidden;
-    font-family: Arial, sans-serif;
+    overflow: hidden; /* We'll handle scrolling inside container */
     background: #222;
-  }
-  #viewer-container {
-    position: relative;
-    width: 100vw;
-    height: 100vh;
-    overflow-y: auto;
-    overflow-x: hidden;
-    -webkit-overflow-scrolling: touch;
-    touch-action: pan-y pinch-zoom;
-    background: #111;
   }
   #pdf-container {
     position: relative;
-    width: 100%;
-    transform-origin: 0 0;
-    will-change: transform;
+    width: 100vw;
+    height: 100vh;
+    overflow-y: scroll;
+    -webkit-overflow-scrolling: touch;
+    touch-action: none; /* We'll manage gestures */
+    background: #444;
     cursor: grab;
   }
-  #pdf-container.grabbing {
-    cursor: grabbing;
+  #pdf-pages {
+    transform-origin: 0 0;
+    will-change: transform;
+    user-select: none;
+    -webkit-user-select: none;
   }
   canvas {
     display: block;
-    width: 100%;
-    height: auto;
-    user-select: none;
-    -webkit-user-select: none;
-    margin: 0 auto 10px;
-    box-shadow: 0 0 8px rgba(0,0,0,0.5);
-    border-radius: 4px;
+    margin: 0 auto 10px auto;
+    max-width: 100%;
+    height: auto !important;
   }
 </style>
 </head>
 <body>
 
-<div id="viewer-container">
-  <div id="pdf-container"></div>
+<div id="pdf-container">
+  <div id="pdf-pages"></div>
 </div>
 
 <!-- PDF.js library -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.min.js"></script>
 <!-- Hammer.js for gestures -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
 
 <script>
 (async () => {
   const url = 'https://imado-imad.github.io/bac/pdfs/2024-mathematics-exam-1.pdf';
+  const container = document.getElementById('pdf-container');
+  const pagesContainer = document.getElementById('pdf-pages');
 
-  const pdfjsLib = window['pdfjs-dist/build/pdf'];
+  // PDF.js setup
   pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.worker.min.js';
 
-  const container = document.getElementById('pdf-container');
-  const viewer = document.getElementById('viewer-container');
+  const pdfDoc = await pdfjsLib.getDocument(url).promise;
 
-  // State variables for zoom and pan
+  // Render all pages
+  const renderPage = async (pageNum) => {
+    const page = await pdfDoc.getPage(pageNum);
+    const viewport = page.getViewport({ scale: 1 });
+    // Calculate scale to fit width 100% of container width (viewport width)
+    const containerWidth = container.clientWidth;
+    const scale = containerWidth / viewport.width;
+    const scaledViewport = page.getViewport({ scale });
+
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    canvas.width = scaledViewport.width;
+    canvas.height = scaledViewport.height;
+    canvas.style.width = '100%';
+    canvas.style.height = 'auto';
+    canvas.dataset.pageNum = pageNum;
+
+    await page.render({ canvasContext: context, viewport: scaledViewport }).promise;
+
+    return canvas;
+  };
+
+  // Load and render all pages sequentially
+  for (let i = 1; i <= pdfDoc.numPages; i++) {
+    const canvas = await renderPage(i);
+    pagesContainer.appendChild(canvas);
+  }
+
+  // Zoom and Pan variables
   let scale = 1;
-  const minScale = 1;
-  const maxScale = 4;
+  let minScale = 1;
+  let maxScale = 4;
   let lastScale = 1;
   let posX = 0;
   let posY = 0;
   let lastPosX = 0;
   let lastPosY = 0;
   let isDragging = false;
+  let dragStartX = 0;
+  let dragStartY = 0;
 
-  // Load PDF
-  const loadingTask = pdfjsLib.getDocument(url);
-  const pdf = await loadingTask.promise;
-
-  // Render all pages
-  for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-    const page = await pdf.getPage(pageNum);
-
-    // Calculate viewport at scale=1 (width 100%)
-    const viewport = page.getViewport({ scale: 1 });
-    const canvas = document.createElement('canvas');
-    const context = canvas.getContext('2d');
-
-    // Set canvas width to container width (will be 100% width)
-    // We will scale canvas internally to keep quality at scale=1
-    // So canvas width = viewport.width, height = viewport.height
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
-
-    // Render page to canvas at scale=1
-    await page.render({ canvasContext: context, viewport }).promise;
-
-    // Append canvas
-    container.appendChild(canvas);
-  }
-
-  // After rendering, scale canvases responsively to fill width
-  function resizeCanvases() {
-    const canvases = container.querySelectorAll('canvas');
-    const containerWidth = viewer.clientWidth;
-
-    canvases.forEach(canvas => {
-      // Calculate scale factor to fit container width
-      const scaleFactor = containerWidth / canvas.width;
-      canvas.style.width = containerWidth + 'px';
-      canvas.style.height = (canvas.height * scaleFactor) + 'px';
-    });
-  }
-  resizeCanvases();
-
-  // On window resize, recalc canvas sizes
-  window.addEventListener('resize', () => {
-    resizeCanvases();
-    resetTransform();
-  });
-
-  // Transform helpers
+  // Update transform with bounds checking
   function updateTransform() {
-    container.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`;
-  }
-  function resetTransform() {
-    scale = 1;
-    posX = 0;
-    posY = 0;
-    lastPosX = 0;
-    lastPosY = 0;
-    lastScale = 1;
-    updateTransform();
-  }
-
-  // Boundaries calculation to restrict panning
-  function limitBounds(x, y, scale) {
-    const viewerRect = viewer.getBoundingClientRect();
+    // Calculate max translate values to prevent moving out of bounds
     const containerRect = container.getBoundingClientRect();
+    const contentRect = pagesContainer.getBoundingClientRect();
 
-    // Calculate scaled width/height of pdf container
-    const scaledWidth = container.scrollWidth * scale;
-    const scaledHeight = container.scrollHeight * scale;
+    // Width and height after scaling
+    const scaledWidth = pagesContainer.scrollWidth * scale;
+    const scaledHeight = pagesContainer.scrollHeight * scale;
 
-    // Limits for x
-    let minX = Math.min(0, viewerRect.width - scaledWidth);
-    let maxX = 0;
+    // Limits for panning (content should not move beyond container edges)
+    const maxX = 0;
+    const maxY = 0;
+    const minX = Math.min(containerRect.width - scaledWidth, 0);
+    const minY = Math.min(containerRect.height - scaledHeight, 0);
 
-    // Limits for y
-    let minY = Math.min(0, viewerRect.height - scaledHeight);
-    let maxY = 0;
+    // Clamp posX and posY
+    posX = Math.min(maxX, Math.max(minX, posX));
+    posY = Math.min(maxY, Math.max(minY, posY));
 
-    // Clamp x and y
-    let clampedX = Math.min(maxX, Math.max(minX, x));
-    let clampedY = Math.min(maxY, Math.max(minY, y));
-
-    return { x: clampedX, y: clampedY };
+    pagesContainer.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`;
   }
 
-  // Double-click zoom toggle between 1x and 2x at clicked point
-  viewer.addEventListener('dblclick', e => {
+  // Handle double click zoom in/out
+  container.addEventListener('dblclick', (e) => {
     e.preventDefault();
 
-    const rect = container.getBoundingClientRect();
+    // Get click coordinates relative to pagesContainer
+    const rect = pagesContainer.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const clickY = e.clientY - rect.top;
 
-    if (scale === 1) {
-      // Zoom in to 2x
-      scale = 2;
-      // Calculate new posX and posY to zoom around click point
-      posX = posX - (clickX) * (scale - 1);
-      posY = posY - (clickY) * (scale - 1);
-    } else {
-      // Zoom out to 1x
-      scale = 1;
-      posX = 0;
-      posY = 0;
-    }
+    // Toggle zoom between minScale and 2x
+    let newScale = (scale === minScale) ? 2 : minScale;
 
-    // Limit bounds
-    const limited = limitBounds(posX, posY, scale);
-    posX = limited.x;
-    posY = limited.y;
+    // Calculate translate to zoom on click point
+    // Formula: newPos = oldPos - (clickPos * (newScale - oldScale))
+    posX = posX - clickX * (newScale - scale);
+    posY = posY - clickY * (newScale - scale);
 
-    lastScale = scale;
-    lastPosX = posX;
-    lastPosY = posY;
-
+    scale = newScale;
     updateTransform();
   });
 
-  // Initialize Hammer.js for pinch and pan gestures
-  const hammer = new Hammer(viewer);
+  // Hammer.js for pinch and pan
+  const hammer = new Hammer(container);
   hammer.get('pinch').set({ enable: true });
   hammer.get('pan').set({ direction: Hammer.DIRECTION_ALL });
 
-  hammer.on('pinchstart', e => {
+  hammer.on('pinchstart', (ev) => {
     lastScale = scale;
   });
 
-  hammer.on('pinchmove', e => {
-    scale = lastScale * e.scale;
-    scale = Math.min(maxScale, Math.max(minScale, scale));
+  hammer.on('pinchmove', (ev) => {
+    let newScale = lastScale * ev.scale;
+    newScale = Math.min(maxScale, Math.max(minScale, newScale));
 
-    // Calculate center relative to container
-    const rect = container.getBoundingClientRect();
-    const centerX = e.center.x - rect.left;
-    const centerY = e.center.y - rect.top;
+    // Calculate center point of pinch relative to pagesContainer
+    const rect = pagesContainer.getBoundingClientRect();
+    const centerX = ev.center.x - rect.left;
+    const centerY = ev.center.y - rect.top;
 
     // Adjust posX and posY to zoom around pinch center
-    posX = lastPosX - (centerX) * (scale - lastScale);
-    posY = lastPosY - (centerY) * (scale - lastScale);
+    posX = posX - centerX * (newScale - scale);
+    posY = posY - centerY * (newScale - scale);
 
-    // Clamp
-    const limited = limitBounds(posX, posY, scale);
-    posX = limited.x;
-    posY = limited.y;
-
+    scale = newScale;
     updateTransform();
   });
 
-  hammer.on('pinchend', e => {
-    lastScale = scale;
-    lastPosX = posX;
-    lastPosY = posY;
-  });
-
-  // Variables for drag
-  let isPointerDown = false;
-  let startX = 0;
-  let startY = 0;
-
-  // Pointer events for dragging
-  viewer.addEventListener('pointerdown', e => {
-    isPointerDown = true;
-    startX = e.clientX - lastPosX;
-    startY = e.clientY - lastPosY;
-    container.classList.add('grabbing');
-  });
-
-  viewer.addEventListener('pointermove', e => {
-    if (!isPointerDown) return;
-
-    e.preventDefault();
-
-    let newX = e.clientX - startX;
-    let newY = e.clientY - startY;
-
-    // If zoomed in, allow dragging in all directions with bounds
-    if (scale > 1) {
-      const limited = limitBounds(newX, newY, scale);
-      posX = limited.x;
-      posY = limited.y;
-    } else {
-      // If not zoomed, only allow vertical dragging (scroll)
-      posX = 0;
-      posY = 0;
-      // Instead of panning, scroll the container vertically
-      viewer.scrollTop -= e.movementY;
-      return;
-    }
-
-    updateTransform();
-  });
-
-  viewer.addEventListener('pointerup', e => {
-    isPointerDown = false;
-    lastPosX = posX;
-    lastPosY = posY;
-    container.classList.remove('grabbing');
-  });
-  viewer.addEventListener('pointercancel', e => {
-    isPointerDown = false;
-    lastPosX = posX;
-    lastPosY = posY;
-    container.classList.remove('grabbing');
-  });
-
-  // Touch drag vertical scroll when not zoomed
-  // Hammer pan event also helps for mobile drag scroll
-  hammer.on('panstart', e => {
+  hammer.on('panstart', (ev) => {
     isDragging = true;
-    startX = e.center.x - lastPosX;
-    startY = e.center.y - lastPosY;
+    dragStartX = ev.center.x;
+    dragStartY = ev.center.y;
+    lastPosX = posX;
+    lastPosY = posY;
+    container.style.cursor = 'grabbing';
   });
 
-  hammer.on('panmove', e => {
+  hammer.on('panmove', (ev) => {
     if (!isDragging) return;
 
-    if (scale === 1) {
-      // Scroll vertically on pan
-      viewer.scrollTop -= e.deltaY;
-    } else {
-      // Pan PDF container when zoomed
-      let newX = e.center.x - startX;
-      let newY = e.center.y - startY;
+    let deltaX = ev.center.x - dragStartX;
+    let deltaY = ev.center.y - dragStartY;
 
-      const limited = limitBounds(newX, newY, scale);
-      posX = limited.x;
-      posY = limited.y;
-
+    // If zoomed in, allow dragging in all directions
+    // If zoom is 1, allow vertical dragging (scrolling)
+    if (scale > 1) {
+      posX = lastPosX + deltaX;
+      posY = lastPosY + deltaY;
       updateTransform();
+    } else {
+      // When not zoomed, allow vertical scroll by adjusting container.scrollTop
+      container.scrollTop -= deltaY;
+      dragStartY = ev.center.y; // reset drag start for smooth scroll
     }
   });
 
-  hammer.on('panend pancancel', e => {
+  hammer.on('panend pancancel', (ev) => {
     isDragging = false;
+    container.style.cursor = 'grab';
+  });
+
+  // Mouse dragging for desktop
+  container.addEventListener('mousedown', (e) => {
+    if (scale <= 1) return; // No dragging if not zoomed
+
+    isDragging = true;
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
     lastPosX = posX;
     lastPosY = posY;
+    container.style.cursor = 'grabbing';
+    e.preventDefault();
   });
 
-  // Prevent default double-tap zoom on mobile browsers
-  viewer.addEventListener('touchstart', e => {
-    if (e.touches.length > 1) {
-      e.preventDefault();
+  window.addEventListener('mouseup', () => {
+    if (isDragging) {
+      isDragging = false;
+      container.style.cursor = 'grab';
     }
-  }, { passive: false });
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    let deltaX = e.clientX - dragStartX;
+    let deltaY = e.clientY - dragStartY;
+
+    posX = lastPosX + deltaX;
+    posY = lastPosY + deltaY;
+    updateTransform();
+  });
+
+  // On window resize, re-render pages to fit new width
+  window.addEventListener('resize', async () => {
+    // Reset zoom and pan
+    scale = 1;
+    posX = 0;
+    posY = 0;
+    updateTransform();
+
+    // Clear and re-render pages
+    pagesContainer.innerHTML = '';
+    for (let i = 1; i <= pdfDoc.numPages; i++) {
+      const canvas = await renderPage(i);
+      pagesContainer.appendChild(canvas);
+    }
+  });
+
+  // Initial transform
+  updateTransform();
 
 })();
 </script>
 
 </body>
 </html>
-
