@@ -3,333 +3,85 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced PDF Viewer</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+    <title>PDF Viewer</title>
     <style>
-        #pdf-viewer {
-            touch-action: none;
-            overflow: hidden;
-            width: 100%;
-            background-color: #f0f0f0;
-        }
-        .pdf-container {
-            position: relative;
-            transform-origin: 0 0;
-            transition: transform 0.15s ease-out;
-        }
-        .pdf-page {
-            margin-bottom: 20px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-        .no-select {
-            user-select: none;
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-        }
-        @media (max-width: 768px) {
-            .pdf-page {
-                margin-bottom: 10px;
-            }
-        }
+body, html {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    height: 100%;
+}
+
+#pdf-container {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    position: relative;
+}
+
+#iframe {
+    width: 100%;
+    height: auto;
+    border: none;
+    display: block;
+}
+
+#pdf-frame {
+    width: 100%;
+    height: 100%;
+    transform-origin: top left;
+    transition: transform 0.2s ease;
+}
+
     </style>
 </head>
-<body class="bg-gray-100 font-sans">
-    <div class="container mx-auto px-4 py-4">
-        <header class="mb-6">
-            <h1 class="text-2xl md:text-3xl font-bold text-gray-800">Mathematics Exam 2024</h1>
-            <div class="flex items-center mt-2 space-x-4">
-                <div class="text-sm text-gray-600">
-                    <span class="font-medium">Pages:</span> <span id="page-count">0</span>
-                </div>
-            </div>
-        </header>
-
-        <div class="bg-white rounded-lg shadow-md overflow-hidden">
-            <div id="pdf-viewer" class="relative">
-                <div id="pdf-container" class="pdf-container"></div>
-            </div>
-        </div>
-
-        <div class="mt-6 flex justify-center space-x-4">
-            <button id="zoom-in" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">
-                Zoom In
-            </button>
-            <button id="zoom-out" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">
-                Zoom Out
-            </button>
-            <button id="reset-zoom" class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition">
-                Reset
-            </button>
-        </div>
+<body>
+    <div id="pdf-container">
+        <iframe id="pdf-frame" src="https://imado-imad.github.io/bac/pdfs/2024-mathematics-exam-1.pdf" frameborder="0"></iframe>
     </div>
-
+    <script src="https://unpkg.com/hammerjs@2.0.8/hammer.min.js"></script>
     <script>
-        // Set PDF.js worker path
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js';
+const pdfFrame = document.getElementById('pdf-frame');
+let scale = 1;
+let startX, startY, isDragging = false;
 
-        // Initialize variables
-        let pdfDoc = null,
-            currentPage = 1,
-            pageRendering = false,
-            pageNumPending = null,
-            scale = 1.0,
-            transform = { x: 0, y: 0 },
-            maxScale = 3.0,
-            minScale = 0.5,
-            currentTouchStartX = 0,
-            currentTouchStartY = 0,
-            initialPinchDistance = null,
-            initialPinchScale = 1,
-            isDragging = false,
-            dragStartX = 0,
-            dragStartY = 0,
-            transformStartX = 0,
-            transformStartY = 0;
+pdfFrame.addEventListener('dblclick', (e) => {
+    scale = scale === 1 ? 2 : 1; // Toggle zoom
+    pdfFrame.style.transform = `scale(${scale})`;
+});
 
-        const viewer = document.getElementById('pdf-viewer');
-        const container = document.getElementById('pdf-container');
-        const pageCountSpan = document.getElementById('page-count');
-        const zoomInBtn = document.getElementById('zoom-in');
-        const zoomOutBtn = document.getElementById('zoom-out');
-        const resetZoomBtn = document.getElementById('reset-zoom');
+const hammer = new Hammer(pdfFrame);
+hammer.get('pinch').set({ enable: true });
 
-        // Load the PDF document
-        pdfjsLib.getDocument('https://imado-imad.github.io/bac/pdfs/2024-mathematics-exam.pdf').promise.then(function(pdf) {
-            pdfDoc = pdf;
-            pageCountSpan.textContent = pdf.numPages;
+hammer.on('pinch', (e) => {
+    scale *= e.scale;
+    pdfFrame.style.transform = `scale(${scale})`;
+});
 
-            // Render the first page
-            for (let i = 1; i <= pdf.numPages; i++) {
-                renderPage(i);
-            }
+hammer.on('panstart', (e) => {
+    isDragging = true;
+    startX = e.center.x;
+    startY = e.center.y;
+});
 
-            // Set up touch events
-            setupTouchEvents();
-        }).catch(function(error) {
-            console.error('Error loading PDF', error);
-        });
+hammer.on('panmove', (e) => {
+    if (isDragging) {
+        const dx = e.center.x - startX;
+        const dy = e.center.y - startY;
+        pdfFrame.style.transform += `translate(${dx}px, ${dy}px)`;
+        startX = e.center.x;
+        startY = e.center.y;
+    }
+});
 
-        // Render a page
-        function renderPage(num) {
-            pageRendering = true;
-            
-            pdfDoc.getPage(num).then(function(page) {
-                // Calculate viewport to fit width
-                const viewport = page.getViewport({ scale: 1.0 });
-                const desiredWidth = viewer.clientWidth;
-                const tempScale = desiredWidth / viewport.width;
-                const scaledViewport = page.getViewport({ scale: tempScale });
-                
-                // Create canvas element
-                const canvas = document.createElement('canvas');
-                const context = canvas.getContext('2d');
-                const wrapper = document.createElement('div');
-                wrapper.className = 'pdf-page';
-                wrapper.id = `page-${num}`;
-                canvas.className = 'no-select';
-                
-                // Set canvas size
-                canvas.height = scaledViewport.height;
-                canvas.width = scaledViewport.width;
-                
-                wrapper.appendChild(canvas);
-                container.appendChild(wrapper);
-                
-                // Render PDF page into canvas context
-                const renderContext = {
-                    canvasContext: context,
-                    viewport: scaledViewport
-                };
-                
-                const renderTask = page.render(renderContext);
-                
-                renderTask.promise.then(function() {
-                    pageRendering = false;
-                    if (pageNumPending !== null) {
-                        renderPage(pageNumPending);
-                        pageNumPending = null;
-                    }
-                });
-            }).catch(function(error) {
-                console.error('Error rendering page', error);
-            });
-            
-            currentPage = num;
-        }
+hammer.on('panend', () => {
+    isDragging = false;
+});
 
-        // Queue rendering of the page
-        function queueRenderPage(num) {
-            if (pageRendering) {
-                pageNumPending = num;
-            } else {
-                renderPage(num);
-            }
-        }
+window.addEventListener('resize', () => {
+    pdfFrame.style.transform = `scale(${scale})`; // Maintain zoom level on resize
+});
 
-        // Set up touch and gesture events
-        function setupTouchEvents() {
-            const hammer = new Hammer(container);
-            hammer.get('pinch').set({ enable: true });
-            hammer.get('pan').set({ direction: Hammer.DIRECTION_ALL });
-
-            // Double tap to zoom
-            hammer.on('doubletap', function(e) {
-                const rect = container.getBoundingClientRect();
-                const offsetX = e.center.x - rect.left;
-                const offsetY = e.center.y - rect.top;
-                
-                if (scale === 1.0) {
-                    zoomTo(offsetX, offsetY, 2.0);
-                } else {
-                    resetView();
-                }
-            });
-
-            // Pinch zoom
-            hammer.on('pinchstart', function(e) {
-                initialPinchDistance = e.distance;
-                initialPinchScale = scale;
-            });
-
-            hammer.on('pinch', function(e) {
-                if (initialPinchDistance !== null) {
-                    const newScale = initialPinchScale * (e.distance / initialPinchDistance);
-                    const clampedScale = Math.min(Math.max(newScale, minScale), maxScale);
-                    
-                    if (clampedScale !== scale) {
-                        scale = clampedScale;
-                        updateTransform();
-                    }
-                }
-            });
-
-            hammer.on('pinchend', function() {
-                initialPinchDistance = null;
-            });
-
-            // Pan (drag)
-            hammer.on('panstart', function(e) {
-                if (scale > 1.0) {
-                    isDragging = true;
-                    dragStartX = e.center.x;
-                    dragStartY = e.center.y;
-                    transformStartX = transform.x;
-                    transformStartY = transform.y;
-                }
-            });
-
-            hammer.on('pan', function(e) {
-                if (isDragging && scale > 1.0) {
-                    const dx = e.center.x - dragStartX;
-                    const dy = e.center.y - dragStartY;
-                    
-                    transform.x = transformStartX + dx;
-                    transform.y = transformStartY + dy;
-                    
-                    // Apply bounds to prevent dragging beyond edges
-                    const minX = -((scale - 1) * container.clientWidth);
-                    const minY = -((scale - 1) * container.clientHeight);
-                    
-                    transform.x = Math.min(Math.max(transform.x, minX), 0);
-                    transform.y = Math.min(Math.max(transform.y, minY), 0);
-                    
-                    updateTransform();
-                }
-            });
-
-            hammer.on('panend', function() {
-                isDragging = false;
-            });
-
-            // Mouse wheel zoom (for desktop)
-            viewer.addEventListener('wheel', function(e) {
-                if (e.ctrlKey) {
-                    e.preventDefault();
-                    
-                    const rect = container.getBoundingClientRect();
-                    const offsetX = e.clientX - rect.left;
-                    const offsetY = e.clientY - rect.top;
-                    
-                    const direction = -Math.sign(e.deltaY);
-                    const newScale = scale * (1 + direction * 0.1);
-                    
-                    if (newScale !== scale) {
-                        const clampedScale = Math.min(Math.max(newScale, minScale), maxScale);
-                        zoomTo(offsetX, offsetY, clampedScale);
-                    }
-                }
-            }, { passive: false });
-        }
-
-        // Zoom to specific point
-        function zoomTo(x, y, newScale) {
-            const clampedScale = Math.min(Math.max(newScale, minScale), maxScale);
-            
-            // Calculate new transform to zoom into the point
-            const zoomFactor = clampedScale / scale;
-            
-            // Calculate where the mouse is relative to current transform
-            const xRelative = (x - transform.x) / scale;
-            const yRelative = (y - transform.y) / scale;
-            
-            // Calculate new transform to keep that point fixed
-            transform.x = x - xRelative * clampedScale;
-            transform.y = y - yRelative * clampedScale;
-            
-            scale = clampedScale;
-            
-            // Apply bounds to prevent overscrolling
-            const minX = -((scale - 1) * container.clientWidth);
-            const minY = -((scale - 1) * container.clientHeight);
-            
-            transform.x = Math.min(Math.max(transform.x, minX), 0);
-            transform.y = Math.min(Math.max(transform.y, minY), 0);
-            
-            updateTransform();
-        }
-
-        // Update the transform of the container
-        function updateTransform() {
-            container.style.transform = `translate(${transform.x}px, ${transform.y}px) scale(${scale})`;
-            container.style.opacity = '1'; // Ensure it's visible after transform
-        }
-
-        // Reset view to initial state
-        function resetView() {
-            scale = 1.0;
-            transform = { x: 0, y: 0 };
-            updateTransform();
-        }
-
-        // Button event listeners
-        zoomInBtn.addEventListener('click', function() {
-            const centerX = viewer.clientWidth / 2;
-            const centerY = viewer.clientHeight / 2;
-            zoomTo(centerX, centerY, scale + 0.2);
-        });
-
-        zoomOutBtn.addEventListener('click', function() {
-            const centerX = viewer.clientWidth / 2;
-            const centerY = viewer.clientHeight / 2;
-            zoomTo(centerX, centerY, scale - 0.2);
-        });
-
-        resetZoomBtn.addEventListener('click', resetView);
-
-        // Handle window resize
-        window.addEventListener('resize', function() {
-            if (pdfDoc) {
-                // Re-render all pages to adjust to new size
-                container.innerHTML = '';
-                for (let i = 1; i <= pdfDoc.numPages; i++) {
-                    renderPage(i);
-                }
-                resetView();
-            }
-        });
     </script>
 </body>
 </html>
