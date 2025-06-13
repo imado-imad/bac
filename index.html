@@ -3,75 +3,60 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Responsive PDF Viewer with Drag Before Zoom</title>
+<title>Responsive PDF Viewer with Hammer.js</title>
 <style>
-  html, body {
-    margin: 0; padding: 0; height: 100%; overflow: hidden;
+  #container {
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 100%;
     background: #fff;
+    z-index: 1000;
+    overflow: hidden;
   }
   #pdf-container {
     width: 100vw;
     height: 100vh;
-    overflow-y: scroll;
-    -webkit-overflow-scrolling: touch;
+    overflow: hidden;
     position: relative;
-    touch-action: pan-y; /* Allow vertical scroll gestures */
-    user-select: none;
-  }
-  canvas {
-    display: block;
-    width: 100%;
-    height: auto; /* maintain aspect ratio */
-    user-select: none;
-    -webkit-user-drag: none;
-    margin: 0 auto;
+    touch-action: none; /* Required for Hammer.js */
+    transform-origin: 0 0;
   }
 </style>
 </head>
 <body>
-<div id="pdf-container"></div>
+  <div id="container">
+    <div id="pdf-container"></div>
+  </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.min.js"></script>
-<script src="https://unpkg.com/pinch-zoom-js@2.3.5/dist/pinch-zoom.umd.js"></script>
-<script>
-  const url = 'https://imado-imad.github.io/bac/pdfs/2024-mathematics-exam-1.pdf';
-  const container = document.getElementById('pdf-container');
-  let pdfDoc = null;
+  <!-- PDFObject library for embedding PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfobject/2.2.8/pdfobject.min.js"></script>
+  <!-- Hammer.js for pinch-zoom -->
+  <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
 
-  // Initialize PDF.js worker
-  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.worker.min.js';
+  <script>
+    const url = 'https://imado-imad.github.io/bac/pdfs/2024-mathematics-exam-1.pdf';
+    const container = document.getElementById('pdf-container');
 
-  async function renderPDF() {
-    pdfDoc = await pdfjsLib.getDocument(url).promise;
-    for(let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
-      const page = await pdfDoc.getPage(pageNum);
-      const viewport = page.getViewport({ scale: 1 });
-      const canvas = document.createElement('canvas');
-      const context = canvas.getContext('2d');
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
-      canvas.style.width = '100%';
-      canvas.style.height = 'auto';
-      container.appendChild(canvas);
-      await page.render({canvasContext: context, viewport: viewport}).promise;
-    }
-  }
+    // Embed PDF using PDFObject
+    PDFObject.embed(url, container);
 
-  renderPDF().then(() => {
-    // Initialize PinchZoom on the container
-    const pz = new PinchZoom.default(container, {
-      tapZoomFactor: 2,
-      zoomOutFactor: 1,
-      animationDuration: 300,
-      maxZoom: 4,
-      minZoom: 1,
-      draggableUnzoomed: false, // Allow drag even when not zoomed
-      lockDragAxis: false,
-      setOffsetsOnce: true,
-      use2d: true
+    // Initialize Hammer.js on the container
+    const hammer = new Hammer(container);
+    hammer.get('pinch').set({ enable: true });
+
+    let scale = 1;
+
+    hammer.on('pinch', function(ev) {
+      scale = Math.min(Math.max(1, ev.scale), 4); // constrain scale between 1 and 4
+      container.style.transform = `scale(${scale})`;
     });
 
-  });
-</script>
+    hammer.on('pinchend', function(ev) {
+      // Optionally, you can add logic here after pinch ends
+    });
+  </script>
 </body>
 </html>
+
