@@ -71,18 +71,6 @@
       use2d: true
     });
 
-    // Double-click zoom toggle at clicked coordinates
-    container.addEventListener('dblclick', (event) => {
-      event.preventDefault();
-      const rect = container.getBoundingClientRect();
-      const offsetX = event.clientX - rect.left;
-      const offsetY = event.clientY - rect.top;
-      if (pz.getScale() === 1) {
-        pz.zoomTo(offsetX, offsetY, 2);
-      } else {
-        pz.zoomTo(offsetX, offsetY, 1);
-      }
-    });
   });
 </script>
 </body>
