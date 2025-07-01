@@ -91,6 +91,8 @@
                 x: 0,
                 y: 0
             };
+            // MODIFICATION: Initialize scrollContainer property
+            this.scrollContainer = null;
             this.options = Object.assign({}, this.defaults, options);
             this.setupMarkup();
             this.bindEvents();
@@ -572,16 +574,31 @@
             /**
              * Creates the expected html structure
              */
+            // MODIFICATION: Rewritten to include a scrolling container
             setupMarkup: function setupMarkup() {
+                // This is the new container that will provide the vertical scrolling
+                this.scrollContainer = buildElement('<div class="pinch-zoom-scroll-container"></div>');
+                this.el.parentNode.insertBefore(this.scrollContainer, this.el);
+
+                // This is the original container
                 this.container = buildElement('<div class="pinch-zoom-container"></div>');
-                this.el.parentNode.insertBefore(this.container, this.el);
+                this.scrollContainer.appendChild(this.container);
+
                 this.container.appendChild(this.el);
-                this.container.style.overflow = 'hidden';
+
+                // Style the new scroll container to take up the full screen height and allow scrolling
+                this.scrollContainer.style.height = '100vh';
+                this.scrollContainer.style.overflowY = 'auto';
+                this.scrollContainer.style.webkitOverflowScrolling = 'touch'; // For smoother scrolling on iOS
+
+                // Adjust the original container to be visible within the scrolling container
+                this.container.style.overflow = 'visible';
                 this.container.style.position = 'relative';
-                
+
                 // Set initial container height to match the element
                 this.container.style.height = this.el.offsetHeight + 'px';
 
+                // Style the element itself
                 this.el.style.transformOrigin = '0% 0%';
                 this.el.style.position = 'absolute';
                 this.el.style.width = '100%';
@@ -590,8 +607,6 @@
                 this.el.style.left = '0';
                 this.el.style.boxSizing = 'border-box';
                 this.el.style.willChange = 'transform';
-                this.el.style.overflowY = 'scroll';
-                this.el.style.webkitOverflowScrolling = 'touch';
             },
 
             end: function end() {
@@ -639,12 +654,15 @@
 
                 window.setTimeout(function () {
                     this.updatePlanned = false;
+                    
+                    // MODIFICATION: The logic for setting container height and calculating transform is changed
+                    var zoomFactor = this.getInitialZoomFactor() * this.zoomFactor;
+                    
+                    // Update container height to match the scaled element height.
+                    // This allows the scroll container to scroll when the content is larger than the viewport.
+                    this.setContainerY(this.el.offsetHeight * zoomFactor);
 
-                    // Update container height to match element height
-                    this.setContainerY(this.el.offsetHeight);
-
-                    var zoomFactor = this.getInitialZoomFactor() * this.zoomFactor,
-                        offsetX = -(this.offset.x / zoomFactor),
+                    var offsetX = -(this.offset.x / zoomFactor),
                         offsetY = -(this.offset.y / zoomFactor),
                         transform3d = 'scale3d(' + zoomFactor + ', ' + zoomFactor + ',1) ' + 'translate3d(' + offsetX + 'px,' + offsetY + 'px,0px)',
                         transform2d = 'scale(' + zoomFactor + ', ' + zoomFactor + ') ' + 'translate(' + offsetX + 'px,' + offsetY + 'px)',
