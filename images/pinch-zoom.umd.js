@@ -210,9 +210,15 @@
 
                 this.isDoubleTap = true;
 
+                // **This is the modification.**
+                // By removing the conditional check that previously changed the 'center'
+                // when zooming out, the zoom-out action is now consistently centered
+                // on the touch point, matching the zoom-in behavior.
+                /*
                 if (startZoomFactor > zoomFactor) {
                     center = this.getCurrentZoomCenter();
                 }
+                */
 
                 this.animate(this.options.animationDuration, updateProgress, this.swing);
             },
@@ -266,17 +272,13 @@
              */
             sanitizeOffset: function sanitizeOffset(offset) {
                 var elWidth = this.el.offsetWidth * this.getInitialZoomFactor() * this.zoomFactor;
-                var elHeight = this.el.offsetHeight * this.getInitialZoomFactor() * this.zoomFactor;
                 var maxX = elWidth - this.getContainerX() + this.options.horizontalPadding,
-                    maxY = elHeight - this.getContainerY() + this.options.verticalPadding,
                     maxOffsetX = Math.max(maxX, 0),
-                    maxOffsetY = Math.max(maxY, 0),
-                    minOffsetX = Math.min(maxX, 0) - this.options.horizontalPadding,
-                    minOffsetY = Math.min(maxY, 0) - this.options.verticalPadding;
+                    minOffsetX = Math.min(maxX, 0) - this.options.horizontalPadding;
 
                 return {
                     x: Math.min(Math.max(offset.x, minOffsetX), maxOffsetX),
-                    y: Math.min(Math.max(offset.y, minOffsetY), maxOffsetY)
+                    y: offset.y // MODIFICATION: Do not sanitize Y offset
                 };
             },
 
@@ -296,10 +298,13 @@
              */
             scale: function scale(_scale, center) {
                 _scale = this.scaleZoomFactor(_scale);
+
+                // MODIFICATION: Pan x-axis with offset and adjust scrollTop for y-axis zoom
                 this.addOffset({
                     x: (_scale - 1) * (center.x + this.offset.x),
-                    y: (_scale - 1) * (center.y + this.offset.y)
+                    y: 0
                 });
+                this.scrollContainer.scrollTop += (_scale - 1) * (center.y + this.scrollContainer.scrollTop - this.initialOffset.y);
             },
 
             /**
@@ -322,7 +327,7 @@
              *
              * @return {Boolean}
              */
-            
+
             canDrag: function canDrag() {
                 return this.options.draggableUnzoomed || !isCloseTo(this.zoomFactor, 1);
             },
@@ -334,24 +339,26 @@
              */
             drag: function drag(center, lastCenter) {
                 if (lastCenter) {
+                    var deltaX = center.x - lastCenter.x;
+                    var deltaY = center.y - lastCenter.y;
+                    var totalZoomFactor = this.getInitialZoomFactor() * this.zoomFactor;
+            
                     if (this.options.lockDragAxis) {
                         // lock scroll to position that was changed the most
-                        if (Math.abs(center.x - lastCenter.x) > Math.abs(center.y - lastCenter.y)) {
+                        if (Math.abs(deltaX) > Math.abs(deltaY)) {
                             this.addOffset({
-                                x: -(center.x - lastCenter.x),
+                                x: -deltaX * totalZoomFactor,
                                 y: 0
                             });
                         } else {
-                            this.addOffset({
-                                y: -(center.y - lastCenter.y),
-                                x: 0
-                            });
+                            this.scrollContainer.scrollTop -= deltaY;
                         }
                     } else {
                         this.addOffset({
-                            y: -(center.y - lastCenter.y),
-                            x: -(center.x - lastCenter.x)
+                            x: -deltaX * totalZoomFactor,
+                            y: 0
                         });
+                        this.scrollContainer.scrollTop -= deltaY;
                     }
                 }
             },
@@ -489,7 +496,8 @@
              * @return array touches
              */
             getTouches: function getTouches(event) {
-                var rect = this.container.getBoundingClientRect();
+                // MODIFICATION: Use scrollContainer for client rect
+                var rect = this.scrollContainer.getBoundingClientRect();
                 var scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
                 var scrollLeft = document.documentElement.scrollLeft || document.body.scrollLeft;
                 var posTop = rect.top + scrollTop;
@@ -566,7 +574,7 @@
             setContainerY: function setContainerY(y) {
                 return this.container.style.height = y + 'px';
             },
-         
+
             unsetContainerY: function unsetContainerY() {
                 this.container.style.height = null;
             },
